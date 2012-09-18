@@ -1,7 +1,7 @@
 EXECUTABLE=jerkcity
 
 all:
-	g++ -O3 `pkg-config --libs --cflags opencv` *.cc -o $(EXECUTABLE)
+	g++ -o $(EXECUTABLE) --std=c++0x `pkg-config --libs --cflags opencv` *.cc -g
 
 clean:
 	rm -f $(EXECUTABLE)

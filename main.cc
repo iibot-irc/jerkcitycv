@@ -5,8 +5,10 @@
 #include <string>
 
 #define MATCH_THRESH 15000
-#define COLOR_THRESH 200
 #define MAX_CHARS 1000
+#define INTRA_WORD_X_SPACING 4
+#define INTRA_WORD_Y_SPACING 3
+#define INTER_WORD_X_SPACING 10
 
 const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ'-,?!";
 
@@ -15,9 +17,13 @@ std::map<std::string, IplImage*> tmpl_actors;
 
 struct char_match {
   int x, y;
+  int w, h;
   char c;
+  char whitespace; // 0, ' ', '\n'
+  char_match* prev;
+  char_match* next;
 };
-std::vector<std::string> cast;
+
 std::vector<char_match> char_matches;
 
 IplImage* debug_img;
@@ -50,8 +56,12 @@ void find_chars(IplImage* img) {
     IplImage* match = find_template(img, tmpl_alphabet[i]);
     int x, y;
     char_match c;
+    c.next = c.prev = NULL;
+    c.whitespace = 0;
+    c.c = alphabet[i];
+    c.w = tmpl_alphabet[i]->width;
+    c.h = tmpl_alphabet[i]->height;
     while(get_match_min(match, c.x, c.y) < MATCH_THRESH && charcount < MAX_CHARS) {
-      c.c = alphabet[i];
       char_matches.push_back(c);
       charcount++;
       cvRectangle(match,
@@ -73,6 +83,7 @@ void find_chars(IplImage* img) {
     printf("whoa something bad happened\n");
     exit(1);
   }
+  fprintf(stderr, "Found %d chars\n", charcount);
 }
 
 IplImage* load_template(std::string& path) {
@@ -95,7 +106,41 @@ void load_templates() {
   }
 }
 
+void gather_rows() {
+  for(int i = 0; i < char_matches.size(); ++i) {
+    if(char_matches[i].next != NULL) continue; // we want the end of a word
+    for(int j = 0; j < char_matches.size(); ++j) {
+      if(i == j) continue;
+      if(char_matches[j].prev != NULL) continue; // we want the start of another word
+      if(char_matches[i].x > char_matches[j].x) continue;
+      if(abs(char_matches[i].x + char_matches[i].w - char_matches[j].x) < INTER_WORD_X_SPACING &&
+         abs(char_matches[i].y + char_matches[i].h/2 - char_matches[j].y - char_matches[j].h/2) < INTRA_WORD_Y_SPACING) {
+        char_matches[i].next = &char_matches[j];
+        char_matches[j].prev = &char_matches[i];
+        char_matches[i].whitespace = ' ';
+      }
+    }
+  }
+}
+void gather_words() {
+  // link up characters from left to right into words
+  for(int i = 0; i < char_matches.size(); ++i) {
+    if(char_matches[i].next != NULL) continue;
+    for(int j = 0; j < char_matches.size(); ++j) {
+      if(char_matches[j].prev != NULL) continue;
+      if(char_matches[j].x < char_matches[i].x) continue;
+      if(abs(char_matches[i].x + char_matches[i].w - char_matches[j].x) <= INTRA_WORD_X_SPACING &&
+         abs(char_matches[i].y + char_matches[i].h/2 - char_matches[j].y - char_matches[j].h/2) <= INTRA_WORD_Y_SPACING) {
+        char_matches[i].next = &char_matches[j];
+        char_matches[j].prev = &char_matches[i];
+      }
+    }
+  }
+}
+
 int main(int argc, char** argv) {
+  char_matches.reserve(256);
+
   if(argc != 2) {
     printf("No filename provided.\n");
     exit(1);
@@ -113,10 +158,26 @@ int main(int argc, char** argv) {
 
   load_templates();
   find_chars(img);
-  printf("Done (%d chars)\n", charcount);
+  gather_words();
+  gather_rows();
+  // gather lines
+
 
   cvSaveImage("foo.png", debug_img);
 //  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
 
+  for(int i = 0; i < char_matches.size(); i++) {
+    if(char_matches[i].prev != NULL) continue;
+    char_match* foo = &char_matches[i];
+    while(foo != NULL) {
+      printf("%c", foo->c);
+      switch(foo->whitespace) {
+        case ' ': printf(" "); break;
+        default: break;
+      }
+      foo = foo->next;
+    }
+    printf("\n");
+  }
   return 0;
 }
