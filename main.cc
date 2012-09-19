@@ -24,7 +24,17 @@ struct char_match {
   char_match* next;
 };
 
+// newline delimited string
+struct line {
+  int xs, ys;
+  int w, h;
+  std::string s;
+};
+
+
 std::vector<char_match> char_matches;
+std::vector<line> lines;
+
 
 IplImage* debug_img;
 
@@ -106,6 +116,36 @@ void load_templates() {
   }
 }
 
+/**
+ * Dumps gathered words into a vector of lines with the starting
+ */
+void dump_lines() {
+  char_match *cm, *cp;
+  line l;
+  int max_height;
+  for (int i = 0; i < char_matches.size(); ++i) {
+    if (char_matches[i].prev == NULL) {
+      cm = &char_matches[i];
+      l.xs = cm->x; l.ys = cm->y;
+      max_height = cm->h;
+      while(cm) {
+        l.s.append(1, cm->c);
+        if (cm->whitespace) {
+          l.s.append(1, ' ');
+        }
+        // get the max bounding height
+        max_height = cm->h > max_height ? cm->h : max_height;
+        cp = cm;
+        cm = cm->next;
+      }
+      l.w = (cp->x - l.xs) + cp->w;
+      l.h = max_height;
+      lines.push_back(l);
+      l.s.clear();
+    }
+  }
+}
+
 void gather_rows() {
   for(int i = 0; i < char_matches.size(); ++i) {
     if(char_matches[i].next != NULL) continue; // we want the end of a word
@@ -122,6 +162,7 @@ void gather_rows() {
     }
   }
 }
+
 void gather_words() {
   // link up characters from left to right into words
   for(int i = 0; i < char_matches.size(); ++i) {
@@ -160,24 +201,14 @@ int main(int argc, char** argv) {
   find_chars(img);
   gather_words();
   gather_rows();
-  // gather lines
+  dump_lines();
 
 
   cvSaveImage("foo.png", debug_img);
 //  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
 
-  for(int i = 0; i < char_matches.size(); i++) {
-    if(char_matches[i].prev != NULL) continue;
-    char_match* foo = &char_matches[i];
-    while(foo != NULL) {
-      printf("%c", foo->c);
-      switch(foo->whitespace) {
-        case ' ': printf(" "); break;
-        default: break;
-      }
-      foo = foo->next;
-    }
-    printf("\n");
+  for(int i = 0; i < lines.size(); i++) {
+    printf("%d %d %d %d: %s\n", lines[i].xs, lines[i].ys, lines[i].w, lines[i].h, lines[i].s.c_str());
   }
   return 0;
 }
