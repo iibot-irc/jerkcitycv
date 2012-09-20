@@ -3,25 +3,45 @@
 #include <highgui.h>
 #include <vector>
 #include <string>
+#include <sstream>
 
-#define MATCH_THRESH 15000
+#define CHAR_MATCH_THRESH 15000
+#define ACTOR_MATCH_THRESH 1000000
 #define MAX_CHARS 1000
+#define MAX_ACTORS 64
 #define INTRA_WORD_X_SPACING 4
 #define INTRA_WORD_Y_SPACING 3
 #define INTER_WORD_X_SPACING 10
 
+int charcount = 0;
+int actorcount = 0;
+
+enum actor_ID {
+  SPIGOT = 0,
+  DEUCE,
+  RANDS,
+
+  NUM_ACTORS
+};
+
 const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ'-,?!";
 
-IplImage**                       tmpl_alphabet;
-std::map<std::string, IplImage*> tmpl_actors;
+IplImage**             tmpl_alphabet;
+std::vector<IplImage*> tmpl_actors[NUM_ACTORS];
 
 struct char_match {
   int x, y;
   int w, h;
   char c;
-  char whitespace; // 0, ' ', '\n'
+  bool whitespace;
   char_match* prev;
   char_match* next;
+};
+
+struct actor_match {
+  int x, y;
+  int w, h;
+  actor_ID id;
 };
 
 // newline delimited string
@@ -31,12 +51,27 @@ struct line {
   std::string s;
 };
 
-
+std::vector<actor_match> actor_matches;
 std::vector<char_match> char_matches;
 std::vector<line> lines;
 
-
 IplImage* debug_img;
+
+const char* actor_name(actor_ID id) {
+  switch(id) {
+    case SPIGOT: return "SPIGOT";
+    case DEUCE:  return "DEUCE";
+    case RANDS:  return "RANDS";
+    default:     return "?!?!";
+  }
+}
+
+int num_actor_templates(actor_ID id) {
+  switch(id) {
+    case SPIGOT: return 8;
+    default:     return 0;
+  }
+}
 
 IplImage* find_template(IplImage* img, IplImage* tmpl) {
   int W = img->width - tmpl->width + 1;
@@ -59,7 +94,6 @@ float get_match_min(IplImage* img, int& x, int& y) {
   return min_so_far;
 }
 
-int charcount = 0;
 
 void find_chars(IplImage* img) {
   for(int i = 0; i < alphabet.length(); ++i) {
@@ -67,11 +101,11 @@ void find_chars(IplImage* img) {
     int x, y;
     char_match c;
     c.next = c.prev = NULL;
-    c.whitespace = 0;
+    c.whitespace = false;
     c.c = alphabet[i];
     c.w = tmpl_alphabet[i]->width;
     c.h = tmpl_alphabet[i]->height;
-    while(get_match_min(match, c.x, c.y) < MATCH_THRESH && charcount < MAX_CHARS) {
+    while(get_match_min(match, c.x, c.y) < CHAR_MATCH_THRESH && charcount < MAX_CHARS) {
       char_matches.push_back(c);
       charcount++;
       cvRectangle(match,
@@ -96,6 +130,31 @@ void find_chars(IplImage* img) {
   fprintf(stderr, "Found %d chars\n", charcount);
 }
 
+void find_actors(IplImage* img) {
+  for(int id = 0; id < NUM_ACTORS; ++id) {
+    for(int i = 0; i < tmpl_actors[id].size(); ++i) {
+      IplImage* match = find_template(img, tmpl_actors[id][i]);
+      int x, y;
+      actor_match a;
+      a.id = (actor_ID)id;
+      a.w = tmpl_actors[id][i]->width;
+      a.h = tmpl_actors[id][i]->height;
+      while(get_match_min(match, a.x, a.y) < ACTOR_MATCH_THRESH && actorcount < MAX_ACTORS) {
+        actor_matches.push_back(a);
+        actorcount++;
+        cvRectangle(match, cvPoint(a.x, a.y), cvPoint(a.x + a.w, a.y + a.h), cvScalar(FLT_MAX), CV_FILLED);
+        cvRectangle(debug_img, cvPoint(a.x, a.y), cvPoint(a.x + a.w, a.y + a.h), cvScalar(127.0), CV_FILLED);
+      }
+      cvReleaseImage(&match);
+    }
+    if(actorcount == MAX_ACTORS) {
+      printf("whoa something bad happened\n");
+      exit(1);
+    }
+  }
+  fprintf(stderr, "Found %d actors\n", actorcount);
+}
+
 IplImage* load_template(std::string& path) {
   IplImage* img;
   if(!(img = cvLoadImage(path.c_str(), 0))) {
@@ -113,6 +172,19 @@ void load_templates() {
   for(int i = 0; i < alphabet.length(); ++i) {
     path[5] = alphabet[i];
     tmpl_alphabet[i] = load_template(path);
+  }
+  for(int id = 0; id < NUM_ACTORS; ++id) {
+    for(int i = 0; i < num_actor_templates((actor_ID)id); i++) {
+      std::stringstream ppath;
+      std::string path;
+      ppath << "tmpl/" << actor_name((actor_ID)id) << i << ".png";
+      path = ppath.str();
+      IplImage* img = load_template(path);
+      IplImage* flipped = cvCloneImage(img); // shouldn't need to do a full clone, TODO fix
+      cvFlip(img, flipped, 1); // flip on Y axis because actor can talk in either direction
+      tmpl_actors[id].push_back(img);
+      tmpl_actors[id].push_back(flipped);
+    }
   }
 }
 
@@ -157,7 +229,7 @@ void gather_rows() {
          abs(char_matches[i].y + char_matches[i].h/2 - char_matches[j].y - char_matches[j].h/2) < INTRA_WORD_Y_SPACING) {
         char_matches[i].next = &char_matches[j];
         char_matches[j].prev = &char_matches[i];
-        char_matches[i].whitespace = ' ';
+        char_matches[i].whitespace = true;
       }
     }
   }
@@ -181,6 +253,7 @@ void gather_words() {
 
 int main(int argc, char** argv) {
   char_matches.reserve(256);
+  actor_matches.reserve(16);
 
   if(argc != 2) {
     printf("No filename provided.\n");
@@ -199,14 +272,15 @@ int main(int argc, char** argv) {
 
   load_templates();
   find_chars(img);
+  find_actors(img);
   gather_words();
   gather_rows();
   dump_lines();
 
 
-  cvSaveImage("foo.png", debug_img);
-//  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
-
+//  cvSaveImage("foo.png", debug_img);
+  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
+  printf("%d\n", actorcount);
   for(int i = 0; i < lines.size(); i++) {
     printf("%d %d %d %d: %s\n", lines[i].xs, lines[i].ys, lines[i].w, lines[i].h, lines[i].s.c_str());
   }
