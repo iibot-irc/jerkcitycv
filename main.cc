@@ -12,6 +12,7 @@
 #define INTRA_WORD_X_SPACING 4
 #define INTRA_WORD_Y_SPACING 3
 #define INTER_WORD_X_SPACING 10
+#define INTER_ROW_SPACING 5
 
 int charcount = 0;
 int actorcount = 0;
@@ -49,11 +50,20 @@ struct line {
   int xs, ys;
   int w, h;
   std::string s;
+  line* prev;
+  line* next;
+};
+
+struct bubble {
+  int x, y;
+  int w, h;
+  std::string s;
 };
 
 std::vector<actor_match> actor_matches;
 std::vector<char_match> char_matches;
 std::vector<line> lines;
+std::vector<bubble> bubbles;
 
 IplImage* debug_img;
 
@@ -188,6 +198,57 @@ void load_templates() {
   }
 }
 
+bool lines_overlap(line *l1, line *l2) {
+  line* max =  (l1->w > l2->w) ? l1 : l2;
+  line* less = (max == l2) ? l1 : l2;
+  return (less->xs >= max->xs && less->xs < (max->xs + max->w)) ||
+    (less->xs < max->xs && ((less->xs+less->w) > max->xs));
+}
+
+
+void gather_lines() {
+  for (int i = 0 ; i < lines.size(); ++i) {
+    for (int j = 0; j < lines.size(); ++j) {
+      if (i == j) continue;
+      bool b1 = lines_overlap(&lines[i], &lines[j]);
+      //printf("lines overlap: %d\n", b1);
+      bool b2 = abs(lines[i].ys + lines[i].h - lines[j].ys) < INTER_ROW_SPACING;
+      //printf("lines close by: %d\n", b2);
+      if (b1 && b2) {
+        lines[i].next = &lines[j];
+        lines[j].prev = &lines[i];
+      }
+    }
+  }
+  // coalesce speech bubbles
+  bubble b;
+  line *n, *p;
+  int x, y, w, h;
+  for (int i = 0; i < lines.size(); ++i) {
+    if (lines[i].prev == NULL) {
+      std::string s;
+      n = &lines[i];
+      x = lines[i].xs;
+      y = lines[i].ys;
+      w = lines[i].w;
+      h = lines[i].h;
+      while(n) {
+        s.append(n->s);
+        s.append(1, ' ');
+        x = std::min(x, n->xs);
+        w = std::max(w, n->w);
+        p = n;
+        n = n->next;
+      }
+      y = abs(lines[i].ys - p->ys) + p->h;
+      b.s = s;
+      b.x = x; b.y = y;
+      b.w = w; b.h = h;
+      bubbles.push_back(b);
+    }
+  }
+}
+
 /**
  * Dumps gathered words into a vector of lines with the starting
  */
@@ -198,6 +259,7 @@ void dump_lines() {
   for (int i = 0; i < char_matches.size(); ++i) {
     if (char_matches[i].prev == NULL) {
       cm = &char_matches[i];
+      l.prev = NULL; l.next = NULL;
       l.xs = cm->x; l.ys = cm->y;
       max_height = cm->h;
       while(cm) {
@@ -276,13 +338,13 @@ int main(int argc, char** argv) {
   gather_words();
   gather_rows();
   dump_lines();
+  gather_lines();
 
+  cvSaveImage("foo.png", debug_img);
+//  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
 
-//  cvSaveImage("foo.png", debug_img);
-  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
-  printf("%d\n", actorcount);
-  for(int i = 0; i < lines.size(); i++) {
-    printf("%d %d %d %d: %s\n", lines[i].xs, lines[i].ys, lines[i].w, lines[i].h, lines[i].s.c_str());
+  for(int i = 0; i < bubbles.size(); i++) {
+    printf("%d %d %d %d %s\n\n", bubbles[i].x, bubbles[i].y, bubbles[i].w, bubbles[i].h, bubbles[i].s.c_str());
   }
   return 0;
 }
