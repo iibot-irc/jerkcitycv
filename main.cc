@@ -13,6 +13,8 @@
 #define INTRA_WORD_Y_SPACING 3
 #define INTER_WORD_X_SPACING 10
 #define INTER_ROW_SPACING 5
+#define BASICALLY_WHITE 250
+#define PANEL_SKIP_AMOUNT 80
 
 int charcount = 0;
 int actorcount = 0;
@@ -80,6 +82,40 @@ int num_actor_templates(actor_ID id) {
   switch(id) {
     case SPIGOT: return 8;
     default:     return 0;
+  }
+}
+
+/**
+ * Currently does nothing but draw to the debug output.
+ */
+void find_panels(IplImage* img) {
+  uchar* data = (uchar*)img->imageData;
+  for(int i = 0; i < img->height; i++) {
+    int j = 0;
+    while(j < img->width && data[i*img->width + j] >= BASICALLY_WHITE) j++;
+    if(j == img->width) {
+      for(int j = 0; j < img->width; j++) {
+        ((uchar*)debug_img->imageData)[i*img->width + j] = 127;
+      }
+      i += PANEL_SKIP_AMOUNT;
+    }
+  }
+  for(int j = 0; j < img->width; j++) {
+    int i = 0;
+    int ass = 0;
+    while(i < img->height) {
+      if(data[i*img->width + j] < BASICALLY_WHITE) {
+        if(i > 150) break;
+        if(ass++ > 9) break;
+      } else ass = 0;
+      i++;
+    }
+    if(i == img->height) {
+      for(int i = 0; i < img->height; i++) {
+        ((uchar*)debug_img->imageData)[i*img->width + j] = 127;
+      }
+      j += PANEL_SKIP_AMOUNT;
+    }
   }
 }
 
@@ -334,11 +370,12 @@ int main(int argc, char** argv) {
 
   load_templates();
   find_chars(img);
-  find_actors(img);
+  //find_actors(img);
   gather_words();
   gather_rows();
   dump_lines();
   gather_lines();
+  find_panels(img);
 
   cvSaveImage("foo.png", debug_img);
 //  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
