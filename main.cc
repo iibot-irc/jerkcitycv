@@ -62,10 +62,15 @@ struct bubble {
   std::string s;
 };
 
+struct segment {
+  int offset;
+};
+
 std::vector<actor_match> actor_matches;
 std::vector<char_match> char_matches;
 std::vector<line> lines;
 std::vector<bubble> bubbles;
+std::vector<segment> v_segments, h_segments;
 
 IplImage* debug_img;
 
@@ -90,10 +95,13 @@ int num_actor_templates(actor_ID id) {
  */
 void find_panels(IplImage* img) {
   uchar* data = (uchar*)img->imageData;
+  segment s;
   for(int i = 0; i < img->height; i++) {
     int j = 0;
     while(j < img->width && data[i*img->width + j] >= BASICALLY_WHITE) j++;
     if(j == img->width) {
+      s.offset = i;
+      h_segments.push_back(s);
       for(int j = 0; j < img->width; j++) {
         ((uchar*)debug_img->imageData)[i*img->width + j] = 127;
       }
@@ -111,6 +119,8 @@ void find_panels(IplImage* img) {
       i++;
     }
     if(i == img->height) {
+      s.offset = i;
+      v_segments.push_back(s);
       for(int i = 0; i < img->height; i++) {
         ((uchar*)debug_img->imageData)[i*img->width + j] = 127;
       }
