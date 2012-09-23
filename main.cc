@@ -76,6 +76,8 @@ std::vector<std::vector<bubble> > panel_bubbles;
 
 IplImage* debug_img;
 
+bool bubble_comp(bubble i, bubble j) { return i.y < j.y; }
+
 const char* actor_name(actor_ID id) {
   switch(id) {
     case SPIGOT: return "SPIGOT";
@@ -91,6 +93,14 @@ int num_actor_templates(actor_ID id) {
     default:     return 0;
   }
 }
+
+
+void sort_panels() {
+  for(int i = 0; i < panel_bubbles.size(); ++i) {
+    std::sort(panel_bubbles[i].begin(), panel_bubbles[i].end(), bubble_comp);
+  }
+}
+
 
 void coalesce_panels() {
   for (int i = 0; i < v_segments.size() * h_segments.size(); ++i) {
@@ -430,6 +440,7 @@ int main(int argc, char** argv) {
   gather_lines();
   find_panels(img);
   coalesce_panels();
+  sort_panels();
 
   cvSaveImage("foo.png", debug_img);
   /*
