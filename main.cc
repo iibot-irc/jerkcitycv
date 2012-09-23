@@ -31,6 +31,7 @@ const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ'-,?!";
 
 IplImage**             tmpl_alphabet;
 std::vector<IplImage*> tmpl_actors[NUM_ACTORS];
+std::vector<int> alphabet_counts;
 
 struct char_match {
   int x, y;
@@ -187,19 +188,21 @@ void find_chars(IplImage* img) {
     c.c = alphabet[i];
     c.w = tmpl_alphabet[i]->width;
     c.h = tmpl_alphabet[i]->height;
+    alphabet_counts.push_back(0);
     while(get_match_min(match, c.x, c.y) < CHAR_MATCH_THRESH && charcount < MAX_CHARS) {
+      alphabet_counts[i]++;
       char_matches.push_back(c);
       charcount++;
       cvRectangle(match,
                   cvPoint(c.x, c.y),
                   cvPoint(c.x + (float)tmpl_alphabet[i]->width-1,
-                          c.y + (float)tmpl_alphabet[i]->height-1),
+                          c.y + (float)tmpl_alphabet[i]->height),
                   cvScalar(FLT_MAX),
                   CV_FILLED);
       cvRectangle(debug_img,
                   cvPoint(c.x, c.y),
                   cvPoint(c.x + (float)tmpl_alphabet[i]->width-1,
-                          c.y + (float)tmpl_alphabet[i]->height-1),
+                          c.y + (float)tmpl_alphabet[i]->height),
                   cvScalar(0.0),
                   CV_FILLED);
     }
@@ -243,12 +246,12 @@ IplImage* load_template(std::string& path) {
     printf("Couldn't load template %s\n", path.c_str());
     exit(1);
   }
-  fprintf(stderr, "\t%s (%d, %d)\n", path.c_str(), img->width, img->height);
+  //fprintf(stderr, "\t%s (%d, %d)\n", path.c_str(), img->width, img->height);
   return img;
 }
 
 void load_templates() {
-  fprintf(stderr, "Loading templates\n");
+  //fprintf(stderr, "Loading templates\n");
   tmpl_alphabet = new IplImage*[alphabet.length()];
   std::string path = "tmpl/X.png";
   for(int i = 0; i < alphabet.length(); ++i) {
@@ -313,7 +316,7 @@ void gather_lines() {
         n = n->next;
       }
       h = abs(lines[i].ys - p->ys) + p->h;
-      fprintf(stderr, "bubble x y = %d %d\n", x, y);
+      //fprintf(stderr, "bubble x y = %d %d\n", x, y);
       b.s = s;
       b.x = x; b.y = y;
       b.w = w; b.h = h;
@@ -345,7 +348,7 @@ void dump_lines() {
         cp = cm;
         cm = cm->next;
       }
-      l.w = (cp->x - l.xs) + cp->w;
+      l.w = abs(cp->x - l.xs) + cp->w;
       l.h = max_height;
       lines.push_back(l);
       l.s.clear();
@@ -379,8 +382,21 @@ void gather_words() {
       if(char_matches[j].x < char_matches[i].x) continue;
       if(abs(char_matches[i].x + char_matches[i].w - char_matches[j].x) <= INTRA_WORD_X_SPACING &&
          abs(char_matches[i].y + char_matches[i].h/2 - char_matches[j].y - char_matches[j].h/2) <= INTRA_WORD_Y_SPACING) {
-        char_matches[i].next = &char_matches[j];
-        char_matches[j].prev = &char_matches[i];
+        if (char_matches[i].next != NULL) {
+          // either insert it on the end of the chain or into the middle based on which is cleaner
+          if (abs(char_matches[i].x - char_matches[j].x) < abs(char_matches[i].next->x - char_matches[j].x)) {
+            char_matches[i].next->next = &char_matches[j];
+            char_matches[j].prev = char_matches[i].next;
+          } else {
+            char_matches[j].next = char_matches[i].next;
+            char_matches[i].next->prev = &char_matches[j];
+            char_matches[i].next = &char_matches[j];
+            char_matches[j].prev = char_matches[j].next;
+          }
+        } else {
+          char_matches[i].next = &char_matches[j];
+          char_matches[j].prev = &char_matches[i];
+        }
       }
     }
   }
@@ -416,8 +432,12 @@ int main(int argc, char** argv) {
   coalesce_panels();
 
   cvSaveImage("foo.png", debug_img);
-//  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
+  /*
+  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
 
+  for(int i = 0; i < alphabet_counts.size(); ++i)
+    printf("%c -> %d\n", alphabet[i], alphabet_counts[i]);
+  */
   for(int i = 0; i < panel_bubbles.size(); ++i) {
     for(int j = 0; j < panel_bubbles[i].size(); ++j) {
       printf("%s\n", panel_bubbles[i][j].s.c_str());
