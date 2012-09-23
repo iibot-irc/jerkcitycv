@@ -71,6 +71,7 @@ std::vector<char_match> char_matches;
 std::vector<line> lines;
 std::vector<bubble> bubbles;
 std::vector<segment> v_segments, h_segments;
+std::vector<std::vector<bubble> > panel_bubbles;
 
 IplImage* debug_img;
 
@@ -90,18 +91,43 @@ int num_actor_templates(actor_ID id) {
   }
 }
 
+void coalesce_panels() {
+  for (int i = 0; i < v_segments.size() * h_segments.size(); ++i) {
+    std::vector<bubble> v;
+    panel_bubbles.push_back(v);
+  }
+  //fprintf(stderr, "%d x %d panels detected\n", h_segments.size(), v_segments.size());
+
+  int x, y, panel;
+  for (int i = 0; i < bubbles.size(); ++i) {
+    for (x = 0; x < h_segments.size(); ++x) {
+      if (bubbles[i].x < h_segments[x].offset) break;
+    }
+    for (y = 0; y < v_segments.size(); ++y) {
+      if (bubbles[i].y < v_segments[y].offset) break;
+    }
+    assert(y > 0 && x > 0);
+    panel = (y-1) * h_segments.size() + (x-1);
+    //fprintf(stderr, "panel #: %d = %d x %d\n", panel, x, y);
+    panel_bubbles[panel].push_back(bubbles[i]);
+  }
+}
+
 /**
  * Currently does nothing but draw to the debug output.
  */
 void find_panels(IplImage* img) {
   uchar* data = (uchar*)img->imageData;
   segment s;
+  s.offset = 0;
+  v_segments.push_back(s);
+  h_segments.push_back(s);
   for(int i = 0; i < img->height; i++) {
     int j = 0;
     while(j < img->width && data[i*img->width + j] >= BASICALLY_WHITE) j++;
     if(j == img->width) {
       s.offset = i;
-      h_segments.push_back(s);
+      v_segments.push_back(s);
       for(int j = 0; j < img->width; j++) {
         ((uchar*)debug_img->imageData)[i*img->width + j] = 127;
       }
@@ -119,8 +145,8 @@ void find_panels(IplImage* img) {
       i++;
     }
     if(i == img->height) {
-      s.offset = i;
-      v_segments.push_back(s);
+      s.offset = j;
+      h_segments.push_back(s);
       for(int i = 0; i < img->height; i++) {
         ((uchar*)debug_img->imageData)[i*img->width + j] = 127;
       }
@@ -166,14 +192,14 @@ void find_chars(IplImage* img) {
       charcount++;
       cvRectangle(match,
                   cvPoint(c.x, c.y),
-                  cvPoint(c.x + (float)tmpl_alphabet[i]->width,
-                          c.y + (float)tmpl_alphabet[i]->height),
+                  cvPoint(c.x + (float)tmpl_alphabet[i]->width-1,
+                          c.y + (float)tmpl_alphabet[i]->height-1),
                   cvScalar(FLT_MAX),
                   CV_FILLED);
       cvRectangle(debug_img,
                   cvPoint(c.x, c.y),
-                  cvPoint(c.x + (float)tmpl_alphabet[i]->width,
-                          c.y + (float)tmpl_alphabet[i]->height),
+                  cvPoint(c.x + (float)tmpl_alphabet[i]->width-1,
+                          c.y + (float)tmpl_alphabet[i]->height-1),
                   cvScalar(0.0),
                   CV_FILLED);
     }
@@ -286,7 +312,8 @@ void gather_lines() {
         p = n;
         n = n->next;
       }
-      y = abs(lines[i].ys - p->ys) + p->h;
+      h = abs(lines[i].ys - p->ys) + p->h;
+      fprintf(stderr, "bubble x y = %d %d\n", x, y);
       b.s = s;
       b.x = x; b.y = y;
       b.w = w; b.h = h;
@@ -386,12 +413,16 @@ int main(int argc, char** argv) {
   dump_lines();
   gather_lines();
   find_panels(img);
+  coalesce_panels();
 
   cvSaveImage("foo.png", debug_img);
 //  cvSaveImage("foo.png", find_template(img, tmpl_alphabet[4]));
 
-  for(int i = 0; i < bubbles.size(); i++) {
-    printf("%d %d %d %d %s\n\n", bubbles[i].x, bubbles[i].y, bubbles[i].w, bubbles[i].h, bubbles[i].s.c_str());
+  for(int i = 0; i < panel_bubbles.size(); ++i) {
+    for(int j = 0; j < panel_bubbles[i].size(); ++j) {
+      printf("%s\n", panel_bubbles[i][j].s.c_str());
+    }
+    printf("\n");
   }
   return 0;
 }
