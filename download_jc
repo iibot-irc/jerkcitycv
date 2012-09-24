@@ -1,21 +1,23 @@
 #!/bin/bash
 CMC_IN=$HOME/irc/irc.freenode.net/\#cmc/in
 OLDNUMFILE=$HOME/state/prev_jerkcity_num
-wget http://www.jerkcity.com/jc.rss -O $HOME/tmp/farts.rss
-IMG=`grep "<img" $HOME/tmp/farts.rss | sed 's/.*src=\"\(.*\)\".*/\1/g' | head -1`
+wget http://www.jerkcity.com/jc.rss -O $HOME/tmp/jc.rss
+IMG=`grep "<img" $HOME/tmp/jc.rss | sed 's/.*src=\"\(.*\)\".*/\1/g' | head -1`
+TITLE=`cat $HOME/tmp/jc.rss | grep title | head -n 2 |tail -n 1 | sed -e 's/^.*:\ //' | sed -e 's/\].*$//g'`
 NUM=`echo $IMG | sed -e 's/.*\/jerkcity\(.*\).gif.*/\1/g'`
 OLDNUM=`cat $OLDNUMFILE`
+URL=`cat jc.rss | grep true | head -n 1 | sed -e 's/^.*true\">//g' | sed -e's/<.*$//g'`
 echo "img is $IMG"
 echo "num is $NUM"
 echo "ok"
-rm $HOME/tmp/farts.rss
+rm $HOME/tmp/jc.rss
 if [[ $NUM != $OLDNUM ]] ; then
   wget $IMG -O /tmp/jerkcity_img.gif
   convert /tmp/jerkcity_img.gif /tmp/jerkcity_img.png
   cd ~/bin && ~/bin/jerkcity /tmp/jerkcity_img.png > ~/tmp/jerkcity
   cd -
   echo $NUM > $OLDNUMFILE
-  echo "JERKCITY $NUM" > $CMC_IN
+  echo "JERKCITY $NUM: $TITLE  ( $URL )" > $CMC_IN
   IFS=`echo -e "\n\r"`
   for LINE in `cat ~/tmp/jerkcity`
   do

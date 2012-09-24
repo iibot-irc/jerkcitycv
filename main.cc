@@ -451,7 +451,7 @@ int main(int argc, char** argv) {
   */
   for(int i = 0; i < panel_bubbles.size(); ++i) {
     for(int j = 0; j < panel_bubbles[i].size(); ++j) {
-      printf("%s\n", panel_bubbles[i][j].s.c_str());
+      printf("unknown: %s\n", panel_bubbles[i][j].s.c_str());
     }
     printf("\n");
   }
