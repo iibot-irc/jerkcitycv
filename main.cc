@@ -11,7 +11,7 @@
 #define MAX_ACTORS 64
 #define INTRA_WORD_X_SPACING 4
 #define INTRA_WORD_Y_SPACING 3
-#define INTER_WORD_X_SPACING 10
+#define INTER_WORD_X_SPACING 14
 #define INTER_ROW_SPACING 5
 #define BASICALLY_WHITE 250
 #define PANEL_SKIP_AMOUNT 80
@@ -27,7 +27,7 @@ enum actor_ID {
   NUM_ACTORS
 };
 
-const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ'-,?!";
+const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-,?!";
 
 IplImage**             tmpl_alphabet;
 std::vector<IplImage*> tmpl_actors[NUM_ACTORS];
@@ -455,5 +455,9 @@ int main(int argc, char** argv) {
     }
     printf("\n");
   }
+  /*
+  for(int i = 0; i < lines.size(); ++i)
+    printf("%s\n", lines[i].s.c_str());
+  */
   return 0;
 }
