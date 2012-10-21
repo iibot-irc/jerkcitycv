@@ -15,6 +15,7 @@
 #define INTER_ROW_SPACING 5
 #define BASICALLY_WHITE 200
 #define PANEL_SKIP_AMOUNT 80
+#define ALMOST_SAME_HEIGHT 5
 
 int charcount = 0;
 int actorcount = 0;
@@ -76,7 +77,13 @@ std::vector<std::vector<bubble> > panel_bubbles;
 
 IplImage* debug_img;
 
-bool bubble_comp(bubble i, bubble j) { return i.y < j.y; }
+bool bubble_comp(bubble i, bubble j) { 
+  if(abs(i.y - j.y) < ALMOST_SAME_HEIGHT) {
+    return i.x < j.x;
+  } else {
+    return i.y < j.y;
+  }
+}
 
 const char* actor_name(actor_ID id) {
   switch(id) {
