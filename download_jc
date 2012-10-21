@@ -6,7 +6,7 @@ IMG=`grep "<img" $HOME/tmp/jc.rss | sed 's/.*src=\"\(.*\)\".*/\1/g' | head -1`
 TITLE=`cat $HOME/tmp/jc.rss | grep title | head -n 2 |tail -n 1 | sed -e 's/^.*:\ //' | sed -e 's/\].*$//g'`
 NUM=`echo $IMG | sed -e 's/.*\/jerkcity\(.*\).gif.*/\1/g'`
 OLDNUM=`cat $OLDNUMFILE`
-URL=`cat jc.rss | grep true | head -n 1 | sed -e 's/^.*true\">//g' | sed -e's/<.*$//g'`
+URL=`cat $HOME/tmp/jc.rss | grep true | head -n 1 | sed -e 's/^.*true\">//g' | sed -e's/<.*$//g'`
 echo "img is $IMG"
 echo "num is $NUM"
 echo "ok"

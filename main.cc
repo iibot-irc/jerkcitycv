@@ -13,7 +13,7 @@
 #define INTRA_WORD_Y_SPACING 3
 #define INTER_WORD_X_SPACING 14
 #define INTER_ROW_SPACING 5
-#define BASICALLY_WHITE 250
+#define BASICALLY_WHITE 200
 #define PANEL_SKIP_AMOUNT 80
 
 int charcount = 0;
@@ -124,9 +124,6 @@ void coalesce_panels() {
   }
 }
 
-/**
- * Currently does nothing but draw to the debug output.
- */
 void find_panels(IplImage* img) {
   uchar* data = (uchar*)img->imageData;
   segment s;
@@ -135,21 +132,20 @@ void find_panels(IplImage* img) {
   h_segments.push_back(s);
   for(int i = 0; i < img->height; i++) {
     int j = 0;
-    while(j < img->width && data[i*img->width + j] >= BASICALLY_WHITE) j++;
+    while(j < img->width && data[i*img->widthStep + j] >= BASICALLY_WHITE) j++;
     if(j == img->width) {
       s.offset = i;
       v_segments.push_back(s);
       for(int j = 0; j < img->width; j++) {
-        ((uchar*)debug_img->imageData)[i*img->width + j] = 127;
+        ((uchar*)debug_img->imageData)[i*img->widthStep + j] = 127;
       }
-      i += PANEL_SKIP_AMOUNT;
     }
   }
   for(int j = 0; j < img->width; j++) {
     int i = 0;
     int ass = 0;
     while(i < img->height) {
-      if(data[i*img->width + j] < BASICALLY_WHITE) {
+      if(data[i*img->widthStep + j] < BASICALLY_WHITE) {
         if(i > 150) break;
         if(ass++ > 9) break;
       } else ass = 0;
@@ -159,7 +155,7 @@ void find_panels(IplImage* img) {
       s.offset = j;
       h_segments.push_back(s);
       for(int i = 0; i < img->height; i++) {
-        ((uchar*)debug_img->imageData)[i*img->width + j] = 127;
+        ((uchar*)debug_img->imageData)[i*img->widthStep + j] = 127;
       }
       j += PANEL_SKIP_AMOUNT;
     }
@@ -187,6 +183,13 @@ float get_match_min(IplImage* img, int& x, int& y) {
   return min_so_far;
 }
 
+void draw_rect(IplImage* img, float x, float y, float w, float h, float color, int thickness) {
+  cvRectangle(img,
+              cvPoint(x, y),
+              cvPoint(x + w, y + h),
+              cvScalar(color),
+              thickness);
+}
 
 void find_chars(IplImage* img) {
   for(int i = 0; i < alphabet.length(); ++i) {
@@ -203,18 +206,8 @@ void find_chars(IplImage* img) {
       alphabet_counts[i]++;
       char_matches.push_back(c);
       charcount++;
-      cvRectangle(match,
-                  cvPoint(c.x, c.y),
-                  cvPoint(c.x + (float)tmpl_alphabet[i]->width-1,
-                          c.y + (float)tmpl_alphabet[i]->height),
-                  cvScalar(FLT_MAX),
-                  CV_FILLED);
-      cvRectangle(debug_img,
-                  cvPoint(c.x, c.y),
-                  cvPoint(c.x + (float)tmpl_alphabet[i]->width-1,
-                          c.y + (float)tmpl_alphabet[i]->height),
-                  cvScalar(0.0),
-                  CV_FILLED);
+      draw_rect(match, c.x, c.y, (float)tmpl_alphabet[i]->width - 1, (float)tmpl_alphabet[i]->height, FLT_MAX, CV_FILLED);
+      draw_rect(debug_img, c.x, c.y, (float)tmpl_alphabet[i]->width - 1, (float)tmpl_alphabet[i]->height, 0, CV_FILLED);
     }
     cvReleaseImage(&match);
   }
@@ -290,6 +283,17 @@ bool lines_overlap(line *l1, line *l2) {
     (less->xs < max->xs && ((less->xs+less->w) > max->xs));
 }
 
+bool probably_not_line(std::string s) {
+  if(s.length() > 3) return false;
+  int crap = 0;
+  for(int i = 0; i < s.length(); i++) {
+    switch(s[i]) {
+      case '-': case '.': case '=': case '/': case '\\': case '\'': case '"':
+      case '|': case ':': case ';': case ',': crap++; break;
+    }
+  }
+  return crap == s.length() - 1;
+}
 
 void gather_lines() {
   for (int i = 0 ; i < lines.size(); ++i) {
@@ -330,6 +334,8 @@ void gather_lines() {
       b.s = s;
       b.x = x; b.y = y;
       b.w = w; b.h = h;
+      draw_rect(debug_img, b.x, b.y, b.w, b.h, FLT_MAX/2.0, 2);
+      if(probably_not_line(s)) continue;
       bubbles.push_back(b);
     }
   }
