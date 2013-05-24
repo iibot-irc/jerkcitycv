@@ -146,6 +146,7 @@ void find_panels(IplImage* img) {
       for(int j = 0; j < img->width; j++) {
         ((uchar*)debug_img->imageData)[i*img->widthStep + j] = 127;
       }
+      i += PANEL_SKIP_AMOUNT;
     }
   }
   for(int j = 0; j < img->width; j++) {
@@ -153,6 +154,7 @@ void find_panels(IplImage* img) {
     int ass = 0;
     while(i < img->height) {
       if(data[i*img->widthStep + j] < BASICALLY_WHITE) {
+	if(i > img->height - 30) { i++; continue; } // red fucking banner
         if(i > 150) break;
         if(ass++ > 9) break;
       } else ass = 0;
