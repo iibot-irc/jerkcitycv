@@ -6,9 +6,7 @@
 #include <sstream>
 
 #define CHAR_MATCH_THRESH 15000
-#define ACTOR_MATCH_THRESH 1000000
 #define MAX_CHARS 1000
-#define MAX_ACTORS 64
 #define INTRA_WORD_X_SPACING 4
 #define INTRA_WORD_Y_SPACING 3
 #define INTER_WORD_X_SPACING 14
@@ -18,20 +16,10 @@
 #define ALMOST_SAME_HEIGHT 5
 
 int charcount = 0;
-int actorcount = 0;
-
-enum actor_ID {
-  SPIGOT = 0,
-  DEUCE,
-  RANDS,
-
-  NUM_ACTORS
-};
 
 const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-,?!";
 
 IplImage**             tmpl_alphabet;
-std::vector<IplImage*> tmpl_actors[NUM_ACTORS];
 std::vector<int> alphabet_counts;
 
 struct char_match {
@@ -41,12 +29,6 @@ struct char_match {
   bool whitespace;
   char_match* prev;
   char_match* next;
-};
-
-struct actor_match {
-  int x, y;
-  int w, h;
-  actor_ID id;
 };
 
 // newline delimited string
@@ -68,7 +50,6 @@ struct segment {
   int offset;
 };
 
-std::vector<actor_match> actor_matches;
 std::vector<char_match> char_matches;
 std::vector<line> lines;
 std::vector<bubble> bubbles;
@@ -77,7 +58,7 @@ std::vector<std::vector<bubble> > panel_bubbles;
 
 IplImage* debug_img;
 
-bool bubble_comp(bubble i, bubble j) { 
+bool bubble_comp(bubble i, bubble j) {
   if(abs(i.y - j.y) < ALMOST_SAME_HEIGHT) {
     return i.x < j.x;
   } else {
@@ -85,29 +66,11 @@ bool bubble_comp(bubble i, bubble j) {
   }
 }
 
-const char* actor_name(actor_ID id) {
-  switch(id) {
-    case SPIGOT: return "SPIGOT";
-    case DEUCE:  return "DEUCE";
-    case RANDS:  return "RANDS";
-    default:     return "?!?!";
-  }
-}
-
-int num_actor_templates(actor_ID id) {
-  switch(id) {
-    case SPIGOT: return 8;
-    default:     return 0;
-  }
-}
-
-
 void sort_panels() {
   for(int i = 0; i < panel_bubbles.size(); ++i) {
     std::sort(panel_bubbles[i].begin(), panel_bubbles[i].end(), bubble_comp);
   }
 }
-
 
 void coalesce_panels() {
   for (int i = 0; i < v_segments.size() * h_segments.size(); ++i) {
@@ -227,31 +190,6 @@ void find_chars(IplImage* img) {
   fprintf(stderr, "Found %d chars\n", charcount);
 }
 
-void find_actors(IplImage* img) {
-  for(int id = 0; id < NUM_ACTORS; ++id) {
-    for(int i = 0; i < tmpl_actors[id].size(); ++i) {
-      IplImage* match = find_template(img, tmpl_actors[id][i]);
-      int x, y;
-      actor_match a;
-      a.id = (actor_ID)id;
-      a.w = tmpl_actors[id][i]->width;
-      a.h = tmpl_actors[id][i]->height;
-      while(get_match_min(match, a.x, a.y) < ACTOR_MATCH_THRESH && actorcount < MAX_ACTORS) {
-        actor_matches.push_back(a);
-        actorcount++;
-        cvRectangle(match, cvPoint(a.x, a.y), cvPoint(a.x + a.w, a.y + a.h), cvScalar(FLT_MAX), CV_FILLED);
-        cvRectangle(debug_img, cvPoint(a.x, a.y), cvPoint(a.x + a.w, a.y + a.h), cvScalar(127.0), CV_FILLED);
-      }
-      cvReleaseImage(&match);
-    }
-    if(actorcount == MAX_ACTORS) {
-      printf("whoa something bad happened\n");
-      exit(1);
-    }
-  }
-  fprintf(stderr, "Found %d actors\n", actorcount);
-}
-
 IplImage* load_template(std::string& path) {
   IplImage* img;
   if(!(img = cvLoadImage(path.c_str(), 0))) {
@@ -269,19 +207,6 @@ void load_templates() {
   for(int i = 0; i < alphabet.length(); ++i) {
     path[5] = alphabet[i];
     tmpl_alphabet[i] = load_template(path);
-  }
-  for(int id = 0; id < NUM_ACTORS; ++id) {
-    for(int i = 0; i < num_actor_templates((actor_ID)id); i++) {
-      std::stringstream ppath;
-      std::string path;
-      ppath << "tmpl/" << actor_name((actor_ID)id) << i << ".png";
-      path = ppath.str();
-      IplImage* img = load_template(path);
-      IplImage* flipped = cvCloneImage(img); // shouldn't need to do a full clone, TODO fix
-      cvFlip(img, flipped, 1); // flip on Y axis because actor can talk in either direction
-      tmpl_actors[id].push_back(img);
-      tmpl_actors[id].push_back(flipped);
-    }
   }
 }
 
@@ -429,7 +354,6 @@ void gather_words() {
 
 int main(int argc, char** argv) {
   char_matches.reserve(256);
-  actor_matches.reserve(16);
 
   if(argc != 2) {
     printf("No filename provided.\n");
@@ -448,7 +372,6 @@ int main(int argc, char** argv) {
 
   load_templates();
   find_chars(img);
-  //find_actors(img);
   gather_words();
   gather_rows();
   dump_lines();
