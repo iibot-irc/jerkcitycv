@@ -17,8 +17,8 @@ if [[ $EX -ne 0 ]]; then
   exit 40
 fi
 
-EXESC=`echo "$EXPECTED" | sed -e 's/</&gt;/g' -e 's/>/&lt;/g'`
-ACESC=`echo "$ACTUAL" | sed -e 's/</&gt;/g' -e 's/>/&lt;/g'`
+EXESC=`echo "$EXPECTED" | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g'`
+ACESC=`echo "$ACTUAL" | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g'`
 
 if [[ $EXPECTED == "" ]]; then
   echo "<p>No expected data.<p>"
