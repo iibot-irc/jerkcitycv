@@ -1,17 +1,18 @@
 #!/bin/bash
 NUM=$1
-EXPECTED=`awk "/^JERKCITY \#$NUM:/{a=1;next}/--cut here--/{a=0}a" jerkcity.txt | tail -n +3`
+CHUNK=`awk "/^<issue num=\"$NUM\">$/{a=1;next}/<\/dialog>/{a=0}a" dialog.xml`
+EXPECTED=`echo "$CHUNK" | grep -m1 -A5000 '<dialog>' | tail -n +2`
 
 echo "<img src=\"http://jerkcity.com/jerkcity$NUM.gif\">" > out/$NUM.html
 
-if [ ! -f $NUM.png ]; then
+if [ ! -f img/$NUM.png ]; then
   wget --quiet http://jerkcity.com/jerkcity$NUM.gif
-  convert jerkcity$NUM.gif $NUM.png
+  convert jerkcity$NUM.gif img/$NUM.png
   rm jerkcity$NUM.gif
 fi
 
 cd ../
-ACTUAL=`./jerkcity tests/$NUM.png 2>/dev/null | sed -e 's/ *$//' -e 's/^ *//'`
+ACTUAL=`./jerkcity tests/img/$NUM.png 2>/dev/null | sed -e 's/ *$//' -e 's/^ *//'`
 EX=$?
 cd tests
 
@@ -26,7 +27,7 @@ ACESC=`echo "$ACTUAL" | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g'`
 
 if [[ $EXPECTED == "" ]]; then
   echo "<a href=\"$NUM.html\" style=\"font-size: 20; display: block-inline; width: 5em; background: grey\">$NUM</a>" > out/$NUM.dat
-  echo "<p>No expected data.<p><h2>Actual</h2><pre>$ACESC</pre>" >> out/$NUM.html
+  echo "<p>No expected data.<p><h2>Possible Transcription</h2><pre>$ACESC</pre>" >> out/$NUM.html
   exit
 fi
 
