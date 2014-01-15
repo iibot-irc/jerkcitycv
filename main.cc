@@ -17,7 +17,7 @@
 
 int charcount = 0;
 
-const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-,?!";
+const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ-,?!\'";
 
 IplImage**             tmpl_alphabet;
 std::vector<int> alphabet_counts;
