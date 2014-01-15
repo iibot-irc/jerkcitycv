@@ -187,7 +187,6 @@ void find_chars(IplImage* img) {
     printf("whoa something bad happened\n");
     exit(1);
   }
-  fprintf(stderr, "Found %d chars\n", charcount);
 }
 
 IplImage* load_template(std::string& path) {
@@ -391,7 +390,6 @@ int main(int argc, char** argv) {
     for(int j = 0; j < panel_bubbles[i].size(); ++j) {
       printf("unknown: %s\n", panel_bubbles[i][j].s.c_str());
     }
-    printf("\n");
   }
   /*
   for(int i = 0; i < lines.size(); ++i)
