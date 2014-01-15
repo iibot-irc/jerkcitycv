@@ -51,7 +51,7 @@ fi
 
 if [[ "$EXPECTED" != "$ACTUAL" ]]; then
   echo "<a href=\"$NUM.html\" style=\"font-size: 20; display: block-inline; width: 5em; background: yellow\">$NUM</a>" > out/$NUM.dat
-  echo "<p>Incorrect cast.</p><h2>Expected</h2><pre>$EXESC</pre><h2>Actual</h2><pre>$ACESC</pre>" >> out/$NUN.html
+  echo "<p>Incorrect cast.</p><h2>Expected</h2><pre>$EXESC</pre><h2>Actual</h2><pre>$ACESC</pre>" >> out/$NUM.html
   exit
 fi
 
