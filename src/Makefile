@@ -1,6 +1,6 @@
 CXX=clang++
 EXECUTABLE=jerkcity
-CFLAGS=--std=c++0x -O3 -g
+CFLAGS=--std=c++1y -O3 -g
 LDFLAGS=-lboost_program_options -lboost_filesystem -lboost_system `pkg-config --libs opencv`
 
 .PHONY: clean tags

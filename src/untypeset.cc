@@ -56,7 +56,7 @@ struct StrBox {
   }
 };
 
-void merge(StrBox& a, StrBox& b, bool asWords = false) {
+void merge(StrBox& a, StrBox& b, bool asWords) {
   a.last->next = b.first;
   b.first->prev = a.last;
   if (asWords) {
@@ -69,16 +69,17 @@ void merge(StrBox& a, StrBox& b, bool asWords = false) {
   // TODO update a's bounds
 }
 
-void debugLine(Context& ctx, const StrBox& a, const StrBox& b, cv::Scalar c) {
-  int ax = a.bounds.x + a.bounds.width/2;
-  int ay = a.bounds.y + a.bounds.height/2;
-  int bx = b.bounds.x + b.bounds.width/2;
-  int by = b.bounds.y + b.bounds.height/2;
+void debugArrow(Context& ctx, CharBox* a, CharBox* b, cv::Scalar c) {
+  int ax = a->bounds.x + a->bounds.width/2;
+  int ay = a->bounds.y + a->bounds.height/2;
+  int bx = b->bounds.x + b->bounds.width/2;
+  int by = b->bounds.y + b->bounds.height/2;
 
   if (ctx.debug) {
-    cv::line(ctx.debugImg, { ax, ay }, { bx, by }, c, 2);
-    cv::line(ctx.debugImg, { bx, by }, { bx - 3, by + 3}, c, 2);
-    cv::line(ctx.debugImg, { bx, by }, { bx - 3, by - 3}, c, 2);
+    cv::line(ctx.debugImg, { ax, ay }, { bx, by }, c, 2, CV_AA);
+    cv::line(ctx.debugImg, { bx, by }, { bx - 3, by + 3 }, c, 1, CV_AA);
+    cv::line(ctx.debugImg, { bx, by }, { bx - 3, by - 3 }, c, 1, CV_AA);
+    cv::line(ctx.debugImg, { bx - 3, by + 3 }, { bx - 3, by - 3 }, c, 1, CV_AA);
   }
 }
 
@@ -104,10 +105,9 @@ void collect(Context& ctx, std::vector<StrBox>& chunks, F attemptToJoin) {
   }
 }
 
-void collectWords(Context& ctx, std::vector<StrBox>& chars) {
-  collect(ctx, chars, [&](int i, int j) {
-    const float kIntraWordXSpacing = 4;
-    const float kIntraWordYSpacing = 3;
+auto horizCollector(Context& ctx, std::vector<StrBox>& chars, const int kXSpacing, bool asWords, cv::Scalar debugColor) {
+  return [=, &ctx, &chars](int i, int j) {
+    const auto kYSpacing = 3;
 
     CharBox* endOfA = chars[i].last;
     CharBox* startOfB = chars[j].first;
@@ -123,33 +123,37 @@ void collectWords(Context& ctx, std::vector<StrBox>& chars) {
     StrBox& b = chars[j];
 
     // Point on 'a' is on the middle of the right edge
-    float ax = endOfA->bounds.x + endOfA->bounds.width;
-    float ay = endOfA->bounds.y + endOfA->bounds.height/2;
+    auto ax = endOfA->bounds.x + endOfA->bounds.width;
+    auto ay = endOfA->bounds.y + endOfA->bounds.height/2;
 
     // Point on 'b' is on the middle of the left edge
-    float bx = startOfB->bounds.x;
-    float by = startOfB->bounds.y + startOfB->bounds.height/2;
+    auto bx = startOfB->bounds.x;
+    auto by = startOfB->bounds.y + startOfB->bounds.height/2;
 
-    float xDist = std::abs(bx - ax); // abs because they can slightly penetrate
-    float yDist = std::abs(by - ay);
+    auto xDist = std::abs(bx - ax); // abs because chars can slightly penetrate
+    auto yDist = std::abs(by - ay);
 
     //std::cout << xDist << " " << yDist << "\n";
-    if (xDist > kIntraWordXSpacing || yDist > kIntraWordYSpacing) {
+    if (xDist > kXSpacing || yDist > kYSpacing) {
       return -1;
     }
 
     // TODO: old stuff had some extra logic here... is it important?
-    merge(a, b);
-    debugLine(ctx, a, b, { 255, 127, 127});
+    debugArrow(ctx, a.last, b.first, debugColor);
+    merge(a, b, asWords);
 
     return j;
-  });
+  };
+}
+
+void collectWords(Context& ctx, std::vector<StrBox>& chars) {
+  const auto kIntraWordXSpacing = 4;
+  collect(ctx, chars, horizCollector(ctx, chars, kIntraWordXSpacing, false, { 255, 127, 127 }));
 }
 
 void collectLines(Context& ctx, std::vector<StrBox>& words) {
-  collect(ctx, words, [](int i, int j) {
-    return -1;
-  });
+  const auto kInterWordXSpacing = 14;
+  collect(ctx, words, horizCollector(ctx, words, kInterWordXSpacing, true, { 127, 255, 127 }));
 }
 
 void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
