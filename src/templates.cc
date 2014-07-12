@@ -17,11 +17,13 @@ std::vector<Template> loadTemplates(const std::string& pathStr) {
     if (!fs::is_regular_file(file) || file.extension() != ".png") {
       continue;
     }
+
     auto img = cv::imread(file.string(), CV_LOAD_IMAGE_GRAYSCALE);
     if (img.empty()) {
       throw std::runtime_error{"Could not open template " + file.string()};
     }
-    threshold(img);
+
+    // this doesn't work well: threshold(img);
 
     auto label = file.stem().string();
     label = label.substr(0, label.find("."));
