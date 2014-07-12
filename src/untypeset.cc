@@ -19,7 +19,7 @@ struct StrBox {
   CharBox* last;
   cv::Rect bounds;
 
-  void checkRep() {
+  void checkRep() const {
     ASSERT(first != nullptr);
     ASSERT(last != nullptr);
     ASSERT(first->prev == nullptr);
@@ -55,6 +55,13 @@ struct StrBox {
     }
   }
 };
+
+template <class T>
+void checkRep(const std::vector<T>& ts) {
+  for(const auto& t : ts) {
+    t.checkRep();
+  }
+}
 
 void merge(StrBox& a, StrBox& b, bool asWords = false) {
   a.last->next = b.first;
@@ -199,7 +206,7 @@ void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
     return j;
   });
 
-  drawDebugRects(ctx, lines, {127, 255, 255}, 1);
+  drawDebugRects(ctx, lines, {127, 255, 255}, 2);
 }
 
 std::vector<StrBox> initStrBoxes(std::vector<CharBox>& charBoxes) {
@@ -211,10 +218,38 @@ std::vector<StrBox> initStrBoxes(std::vector<CharBox>& charBoxes) {
 }
 
 
-// Sometimes we may pick up "garbage" words - i.e. glyphs will be recognized in the background
-// (usually punctuation.) This function removes them from the word list.
-void filterGarbageWords(std::vector<StrBox>&) {
-  // TODO
+// Sometimes we may pick up "garbage" lines - i.e. glyphs will be recognized in the background
+// (usually punctuation.) This function removes them from the line list.
+void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
+  const size_t kMaxSuspiciousLength = 3;
+
+  for (int i = 0; i < (int)lines.size(); i++) {
+    size_t length = 0;
+    auto& L = lines[i];
+
+    size_t questionableChars = 0;
+    CharBox* ptr = L.first;
+    do {
+      switch (ptr->ch) {
+        case '-': case '.': case '=': case '/': case '\\': case '\'': case '"':
+        case '|': case ':': case ';': case ',': questionableChars++; break;
+        default: break;
+      }
+    } while ((ptr = ptr->next) != nullptr && length++ <= kMaxSuspiciousLength);
+
+    if (length > kMaxSuspiciousLength || questionableChars != length) {
+      continue;
+    }
+
+    if (ctx.debug) {
+      cv::rectangle(ctx.debugImg, L.bounds, { 255, 255, 255 }, CV_FILLED);
+      cv::line(ctx.debugImg, { L.bounds.x, L.bounds.y }, { L.bounds.x + L.bounds.width, L.bounds.y + L.bounds.height }, { 0, 0, 255 }, 2, CV_AA);
+      cv::line(ctx.debugImg, { L.bounds.x, L.bounds.y + L.bounds.height }, { L.bounds.x + L.bounds.width, L.bounds.y }, { 0, 0, 255 }, 2, CV_AA);
+    }
+
+    lines.erase(lines.begin() + i);
+    i = -1;
+  }
 }
 
 int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match) {
@@ -272,22 +307,26 @@ void untypeset(Context& ctx) {
   }
 
   auto chunks = initStrBoxes(charBoxes);
+
   collectWords(ctx, chunks);
-  filterGarbageWords(chunks);
+  checkRep(chunks);
+
   collectLines(ctx, chunks);
+  checkRep(chunks);
+
+  filterGarbageLines(ctx, chunks);
+  checkRep(chunks);
+
   collectBubbles(ctx, chunks);
+  checkRep(chunks);
 
   for (auto bubble : chunks) {
     CharBox* charBox = bubble.first;
     std::string dialog;
-    size_t loopCheck = 0; // make sure we don't get caught in a cycle
     do {
       dialog += charBox->ch;
       if (charBox->wordBoundary) {
         dialog += " ";
-      }
-      if (loopCheck++ == charBoxes.size()) { // This is a "we have surely screwed up" check
-        throw std::runtime_error{"Cycle detected in strBoxes during bubble derasterization"};
       }
     } while ((charBox = charBox->next) != nullptr);
     // add dialog to something
