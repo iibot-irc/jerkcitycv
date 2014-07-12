@@ -66,7 +66,7 @@ void merge(StrBox& a, StrBox& b, bool asWords) {
   }
   a.last = b.last;
 
-  // TODO update a's bounds
+  a.bounds = a.bounds | b.bounds; // union rects
 }
 
 void debugArrow(Context& ctx, CharBox* a, CharBox* b, cv::Scalar c) {
@@ -153,7 +153,13 @@ void collectWords(Context& ctx, std::vector<StrBox>& chars) {
 
 void collectLines(Context& ctx, std::vector<StrBox>& words) {
   const auto kInterWordXSpacing = 14;
-  collect(ctx, words, horizCollector(ctx, words, kInterWordXSpacing, true, { 127, 255, 127 }));
+  const auto debugColor = cv::Scalar{127, 255, 127};
+  collect(ctx, words, horizCollector(ctx, words, kInterWordXSpacing, true, debugColor));
+  for (const auto& line : words) {
+    if (ctx.debug) {
+      cv::rectangle(ctx.debugImg, line.bounds, {255, 127, 255}, 2);
+    }
+  }
 }
 
 void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
