@@ -56,7 +56,7 @@ struct StrBox {
   }
 };
 
-void merge(StrBox& a, StrBox& b, bool asWords) {
+void merge(StrBox& a, StrBox& b, bool asWords = false) {
   a.last->next = b.first;
   b.first->prev = a.last;
   if (asWords) {
@@ -69,7 +69,15 @@ void merge(StrBox& a, StrBox& b, bool asWords) {
   a.bounds = a.bounds | b.bounds; // union rects
 }
 
-void debugArrow(Context& ctx, CharBox* a, CharBox* b, cv::Scalar c) {
+void drawDebugRects(Context& ctx, std::vector<StrBox>& boxes, cv::Scalar c, int thick) {
+  if (ctx.debug) {
+    for (const auto& box : boxes) {
+      cv::rectangle(ctx.debugImg, box.bounds, c, thick);
+    }
+  }
+}
+
+void drawDebugArrow(Context& ctx, CharBox* a, CharBox* b, cv::Scalar c) {
   int ax = a->bounds.x + a->bounds.width/2;
   int ay = a->bounds.y + a->bounds.height/2;
   int bx = b->bounds.x + b->bounds.width/2;
@@ -94,7 +102,7 @@ void collect(std::vector<StrBox>& chunks, F attemptToJoin) {
       auto which = attemptToJoin(i, j);
       if (which == -1) { continue; }
 
-      chunks[which == i ? j : i].checkRep();
+      chunks[(size_t)which == i ? j : i].checkRep();
 
       chunks.erase(chunks.begin() + which);
 
@@ -105,22 +113,22 @@ void collect(std::vector<StrBox>& chunks, F attemptToJoin) {
   }
 }
 
-auto horizCollector(Context& ctx, std::vector<StrBox>& chars, const int kXSpacing, bool asWords, cv::Scalar debugColor) {
-  return [=, &ctx, &chars](int i, int j) {
+auto horizCollector(Context& ctx, std::vector<StrBox>& elems, const int kXSpacing, bool asWords, cv::Scalar debugColor) {
+  return [=, &ctx, &elems](int i, int j) {
     const auto kYSpacing = 3;
 
-    CharBox* endOfA = chars[i].last;
-    CharBox* startOfB = chars[j].first;
+    CharBox* endOfA = elems[i].last;
+    CharBox* startOfB = elems[j].first;
 
     // Force 'a' to be to the left of 'b'
     if (endOfA->bounds.x > startOfB->bounds.x) {
       std::swap(i, j);
-      endOfA = chars[i].last;
-      startOfB = chars[j].first;
+      endOfA = elems[i].last;
+      startOfB = elems[j].first;
     }
 
-    StrBox& a = chars[i];
-    StrBox& b = chars[j];
+    auto& a = elems[i];
+    auto& b = elems[j];
 
     // Point on 'a' is on the middle of the right edge
     auto ax = endOfA->bounds.x + endOfA->bounds.width;
@@ -139,7 +147,7 @@ auto horizCollector(Context& ctx, std::vector<StrBox>& chars, const int kXSpacin
     }
 
     // TODO: old stuff had some extra logic here... is it important?
-    debugArrow(ctx, a.last, b.first, debugColor);
+    drawDebugArrow(ctx, a.last, b.first, debugColor);
     merge(a, b, asWords);
 
     return j;
@@ -155,17 +163,43 @@ void collectLines(Context& ctx, std::vector<StrBox>& words) {
   const auto kInterWordXSpacing = 14;
   const auto debugColor = cv::Scalar{127, 255, 127};
   collect(words, horizCollector(ctx, words, kInterWordXSpacing, true, debugColor));
-  for (const auto& line : words) {
-    if (ctx.debug) {
-      cv::rectangle(ctx.debugImg, line.bounds, {255, 127, 255}, 2);
-    }
+
+  drawDebugRects(ctx, words, {255, 127, 255}, 2);
+}
+
+bool intervalIntersects(int a0, int a1, int b0, int b1) {
+  if(a0 < b0) {
+    return b0 < a1;
+  } else {
+    return a0 < b1;
   }
 }
 
 void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
-  collect(lines, [](int i, int j) {
-    return -1;
+  const auto kInterLineSpacing = 5;
+  collect(lines, [&](int i, int j) {
+
+    // Make lines[i] be above lines[j]
+    if (lines[i].bounds.y > lines[j].bounds.y) {
+      std::swap(i, j);
+    }
+
+    auto& a = lines[i];
+    auto& b = lines[j];
+
+    auto yDist = std::abs(a.bounds.y + a.bounds.height - b.bounds.y);
+    if (!intervalIntersects(a.bounds.x, a.bounds.x + a.bounds.width,
+                           b.bounds.x, b.bounds.x + b.bounds.width)
+     || yDist > kInterLineSpacing) {
+      return -1;
+    }
+
+    merge(a, b);
+
+    return j;
   });
+
+  drawDebugRects(ctx, lines, {127, 255, 255}, 1);
 }
 
 std::vector<StrBox> initStrBoxes(std::vector<CharBox>& charBoxes) {
@@ -176,9 +210,10 @@ std::vector<StrBox> initStrBoxes(std::vector<CharBox>& charBoxes) {
   return result;
 }
 
+
 // Sometimes we may pick up "garbage" words - i.e. glyphs will be recognized in the background
 // (usually punctuation.) This function removes them from the word list.
-void filterGarbageWords(std::vector<StrBox>& words) {
+void filterGarbageWords(std::vector<StrBox>&) {
   // TODO
 }
 
