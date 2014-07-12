@@ -63,7 +63,7 @@ void checkRep(const std::vector<T>& ts) {
   }
 }
 
-void merge(StrBox& a, StrBox& b, bool asWords = false) {
+void merge(StrBox& a, StrBox& b, bool asWords) {
   a.last->next = b.first;
   b.first->prev = a.last;
   if (asWords) {
@@ -201,7 +201,7 @@ void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
       return -1;
     }
 
-    merge(a, b);
+    merge(a, b, true);
 
     return j;
   });
@@ -299,6 +299,21 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
   return results;
 }
 
+std::string strBoxToString(const StrBox& strBox) {
+  std::string result;
+
+  auto ptr = strBox.first;
+
+  do {
+    result += ptr->ch;
+    if (ptr->wordBoundary) {
+      result += " ";
+    }
+  } while((ptr = ptr->next) != nullptr);
+
+  return result;
+}
+
 void untypeset(Context& ctx) {
   std::vector<CharBox> charBoxes;
   {
@@ -320,15 +335,8 @@ void untypeset(Context& ctx) {
   collectBubbles(ctx, chunks);
   checkRep(chunks);
 
-  for (auto bubble : chunks) {
-    CharBox* charBox = bubble.first;
-    std::string dialog;
-    do {
-      dialog += charBox->ch;
-      if (charBox->wordBoundary) {
-        dialog += " ";
-      }
-    } while ((charBox = charBox->next) != nullptr);
-    // add dialog to something
+  for (auto strBox : chunks) {
+    auto contents = strBoxToString(strBox);
+    std::cout << contents << "\n";
   }
 }

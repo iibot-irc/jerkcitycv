@@ -11,10 +11,16 @@ inline void threshold(cv::Mat img) {
   cv::adaptiveThreshold(img, img, 255, CV_ADAPTIVE_THRESH_GAUSSIAN_C, CV_THRESH_BINARY, 5, 5);
 }
 
+struct Bubble {
+  std::string contents;
+  std::string author;
+  cv::Rect bounds;
+};
+
 struct Panel {
   Panel(cv::Rect r) : bounds{std::move(r)} {}
   cv::Rect bounds;
-  std::vector<std::pair<std::string, std::string>> dialog;
+  std::vector<Bubble> dialog;
 };
 
 struct Context {
