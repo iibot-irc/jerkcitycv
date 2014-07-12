@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 
   const auto& inFile = vm["input-file"].as<std::string>();
 
-  auto ctx = Context{vm["input-file"].as<std::string>(), vm.count("debug-file") != 0};
+  auto ctx = Context{inFile, vm.count("debug-file") != 0};
 
   const std::string debugFile = vm.count("debug-file") ? vm["debug-file"].as<std::string>() : "";
 

@@ -84,9 +84,9 @@ void debugArrow(Context& ctx, CharBox* a, CharBox* b, cv::Scalar c) {
 }
 
 template <class F>
-void collect(Context& ctx, std::vector<StrBox>& chunks, F attemptToJoin) {
-  for (int i = 0; i < chunks.size(); i++) {
-    for (int j = 0; j < chunks.size(); j++) {
+void collect(std::vector<StrBox>& chunks, F attemptToJoin) {
+  for (size_t i = 0; i < chunks.size(); i++) {
+    for (size_t j = 0; j < chunks.size(); j++) {
       if (i == j) { continue; }
       chunks[i].checkRep();
       chunks[j].checkRep();
@@ -148,13 +148,13 @@ auto horizCollector(Context& ctx, std::vector<StrBox>& chars, const int kXSpacin
 
 void collectWords(Context& ctx, std::vector<StrBox>& chars) {
   const auto kIntraWordXSpacing = 4;
-  collect(ctx, chars, horizCollector(ctx, chars, kIntraWordXSpacing, false, { 255, 127, 127 }));
+  collect(chars, horizCollector(ctx, chars, kIntraWordXSpacing, false, { 255, 127, 127 }));
 }
 
 void collectLines(Context& ctx, std::vector<StrBox>& words) {
   const auto kInterWordXSpacing = 14;
   const auto debugColor = cv::Scalar{127, 255, 127};
-  collect(ctx, words, horizCollector(ctx, words, kInterWordXSpacing, true, debugColor));
+  collect(words, horizCollector(ctx, words, kInterWordXSpacing, true, debugColor));
   for (const auto& line : words) {
     if (ctx.debug) {
       cv::rectangle(ctx.debugImg, line.bounds, {255, 127, 255}, 2);
@@ -163,7 +163,7 @@ void collectLines(Context& ctx, std::vector<StrBox>& words) {
 }
 
 void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
-  collect(ctx, lines, [](int i, int j) {
+  collect(lines, [](int i, int j) {
     return -1;
   });
 }
