@@ -54,12 +54,15 @@ int main(int argc, char** argv) {
 
   auto ctx = Context{vm["input-file"].as<std::string>(), vm.count("debug-file") != 0};
 
-  findPanels(ctx);
-  untypeset(ctx);
+  const std::string debugFile = vm.count("debug-file") ? vm["debug-file"].as<std::string>() : "";
 
-  if (vm.count("debug-file")) {
-    ctx.saveDebug(vm["debug-file"].as<std::string>());
+  try {
+    findPanels(ctx);
+    untypeset(ctx);
+  } catch (...) {
+    ctx.saveDebug(debugFile);
+    throw;
   }
 
-  return 0;
+  ctx.saveDebug(debugFile);
 }

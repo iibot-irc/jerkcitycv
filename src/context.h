@@ -37,4 +37,8 @@ struct Template {
 
 std::vector<Template> loadTemplates(const std::string& pathStr);
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define ASSERT(x, ...) if (!(x)) { throw std::runtime_error{"Assertion " #x " failed at " __FILE__ ":" TOSTRING(__LINE__) __VA_ARGS__}; }
+
 #endif

@@ -1,48 +1,160 @@
 #include "context.h"
 
-// A CharBox is a node in an intrusive linked list
+// A CharBox is a node in an intrusive doubly-linked list
 struct CharBox {
   char ch;
   cv::Rect bounds;
   bool wordBoundary = false; // Is this node at the end of a word? (i.e. does it need a space after it when derasterizing?)
   CharBox* next = nullptr;
+  CharBox* prev = nullptr;
 };
 
 // A StrBox points to the start and end of a CharBox list. It also caches the bounding rect for the entire list.
 struct StrBox {
   StrBox(CharBox* first_, CharBox *last_, cv::Rect bounds_) : first{first_}, last{last_}, bounds{bounds_} {
-    assert(first != nullptr);
-    assert(last != nullptr);
+    checkRep();
   }
 
   CharBox* first;
   CharBox* last;
   cv::Rect bounds;
+
+  void checkRep() {
+    ASSERT(first != nullptr);
+    ASSERT(last != nullptr);
+    ASSERT(first->prev == nullptr);
+    ASSERT(last->next == nullptr);
+
+    // Make sure last is reachable from first and vice-versa
+    if (first == last) {
+      return;
+    }
+    auto soFar = std::string{first->ch};
+    auto tortoise = first;
+    auto hare = first->next;
+    ASSERT(hare != nullptr);
+    while (1) {
+      // We are maintaining the invariant that everything up to the tortoise has its prev pointers set correctly.
+
+      if (tortoise == last) {
+        return;
+      }
+
+      // If the tortoise isnt at the end it will only reach the hare if there is a cycle
+      ASSERT(tortoise != hare, "string so far: " + soFar);
+
+      // Since we aren't at the end, verify that we are linked to the next node correctly
+      ASSERT(tortoise->next->prev = tortoise, "string so far: " + soFar);
+
+      // Tortoise moves 1 step
+      tortoise = tortoise->next;
+      soFar += tortoise->ch;
+
+      // Hare attempts to move 2 steps forward
+      hare = hare->next ? (hare->next->next ? hare->next->next : hare->next) : hare;
+    }
+  }
 };
 
-//StrBox merge(const StrBox& a, const StrBox& b, bool AsWords = false) {
-//  return PPPP
-//}
+void merge(StrBox& a, StrBox& b, bool asWords = false) {
+  a.last->next = b.first;
+  b.first->prev = a.last;
+  if (asWords) {
+    ASSERT(!a.last->wordBoundary);
+    ASSERT(!b.last->wordBoundary);
+    a.last->wordBoundary = true;
+  }
+  a.last = b.last;
+
+  // TODO update a's bounds
+}
+
+void debugLine(Context& ctx, const StrBox& a, const StrBox& b, cv::Scalar c) {
+  int ax = a.bounds.x + a.bounds.width/2;
+  int ay = a.bounds.y + a.bounds.height/2;
+  int bx = b.bounds.x + b.bounds.width/2;
+  int by = b.bounds.y + b.bounds.height/2;
+
+  if (ctx.debug) {
+    cv::line(ctx.debugImg, { ax, ay }, { bx, by }, c, 2);
+    cv::line(ctx.debugImg, { bx, by }, { bx - 3, by + 3}, c, 2);
+    cv::line(ctx.debugImg, { bx, by }, { bx - 3, by - 3}, c, 2);
+  }
+}
 
 template <class F>
-void collect(Context& ctx, std::vector<StrBox>& chunks, F joinable) {
+void collect(Context& ctx, std::vector<StrBox>& chunks, F attemptToJoin) {
+  for (int i = 0; i < chunks.size(); i++) {
+    for (int j = 0; j < chunks.size(); j++) {
+      if (i == j) { continue; }
+      chunks[i].checkRep();
+      chunks[j].checkRep();
+
+      auto which = attemptToJoin(i, j);
+      if (which == -1) { continue; }
+
+      chunks[which == i ? j : i].checkRep();
+
+      chunks.erase(chunks.begin() + which);
+
+      // restart the process
+      i = 0;
+      j = -1;
+    }
+  }
 }
 
 void collectWords(Context& ctx, std::vector<StrBox>& chars) {
-  collect(ctx, chars, [](CharBox& a, CharBox& b) {
-    return false;
+  collect(ctx, chars, [&](int i, int j) {
+    const float kIntraWordXSpacing = 4;
+    const float kIntraWordYSpacing = 3;
+
+    CharBox* endOfA = chars[i].last;
+    CharBox* startOfB = chars[j].first;
+
+    // Force 'a' to be to the left of 'b'
+    if (endOfA->bounds.x > startOfB->bounds.x) {
+      std::swap(i, j);
+      endOfA = chars[i].last;
+      startOfB = chars[j].first;
+    }
+
+    StrBox& a = chars[i];
+    StrBox& b = chars[j];
+
+    // Point on 'a' is on the middle of the right edge
+    float ax = endOfA->bounds.x + endOfA->bounds.width;
+    float ay = endOfA->bounds.y + endOfA->bounds.height/2;
+
+    // Point on 'b' is on the middle of the left edge
+    float bx = startOfB->bounds.x;
+    float by = startOfB->bounds.y + startOfB->bounds.height/2;
+
+    float xDist = std::abs(bx - ax); // abs because they can slightly penetrate
+    float yDist = std::abs(by - ay);
+
+    //std::cout << xDist << " " << yDist << "\n";
+    if (xDist > kIntraWordXSpacing || yDist > kIntraWordYSpacing) {
+      return -1;
+    }
+
+    // TODO: old stuff had some extra logic here... is it important?
+    merge(a, b);
+    debugLine(ctx, a, b, { 255, 127, 127});
+
+    return j;
   });
 }
 
 void collectLines(Context& ctx, std::vector<StrBox>& words) {
-  collect(ctx, words, [](CharBox& a, CharBox& b) {
-    return false;
+  collect(ctx, words, [](int i, int j) {
+    return -1;
   });
 }
 
 void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
-  collect(ctx, lines, [](CharBox& a, CharBox& b) {
-    return false;
+  collect(ctx, lines, [](int i, int j) {
+    return -1;
   });
 }
 
@@ -72,7 +184,7 @@ int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match) {
     if (data[i] < kCharMatchThresh) {
       match.x = i % width;
       match.y = i / width;
-      return startIndex + match.width;
+      return startIndex + match.width - 1;
     }
   }
   return -1;
@@ -89,7 +201,7 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
 
     CharBox ch;
     ch.ch = tmpl.ch;
-    ch.bounds = cv::Rect{0, 0, tmpl.img.size().width, tmpl.img.size().height};
+    ch.bounds = cv::Rect{{0, 0}, tmpl.img.size()};
 
     // Find all instances of this glyph
     int index = 0;
@@ -98,10 +210,10 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
 
       // Clear out a ROI around the match we ju
       cv::rectangle(matchAtlas, ch.bounds, FLT_MAX, CV_FILLED);
-      if (ctx.debug) { cv::rectangle(ctx.debugImg, ch.bounds, cv::Scalar(255, 127, 127), CV_FILLED); }
+      if (ctx.debug) { cv::rectangle(ctx.debugImg, ch.bounds, {0, 0, 0}, CV_FILLED); }
     }
     if (results.size() >= kMaxChars) {
-      break;
+      throw std::runtime_error{"Whoa - too many characters. Something went wrong."};
     }
   }
   return results;

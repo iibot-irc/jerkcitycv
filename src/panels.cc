@@ -1,5 +1,3 @@
-#include <cassert>
-
 #include "context.h"
 
 void debugLine(Context& ctx, int x0, int y0, int x1, int y1) {
@@ -8,7 +6,7 @@ void debugLine(Context& ctx, int x0, int y0, int x1, int y1) {
     }
 }
 void findPanels(Context& ctx) {
-  assert(ctx.img.channels() == 1);
+  ASSERT(ctx.img.channels() == 1);
 
   const size_t kSkipAmount = 80; // If we find a panel divider, skip 80 pixels for the next one.
   const uint8_t kBasicallyWhite = 200; // Any value above this is to be considered "white"
@@ -113,7 +111,7 @@ void findPanels(Context& ctx) {
       int32_t x1 = *(xit + 1);
       int32_t y0 = *yit;
       int32_t y1 = *(yit + 1);
-      assert(x0 < x1 && y0 < y1);
+      ASSERT(x0 < x1 && y0 < y1);
       ctx.panels.emplace_back(Panel{cv::Rect{x0, y0, x1 - x0, y1 - y0}});
     }
   }
