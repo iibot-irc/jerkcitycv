@@ -251,7 +251,7 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
 }
 
 int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match) {
-  const size_t kCharMatchThresh = 15000;
+  const float kCharMatchThresh = 2.0;
 
   const int width = matchAtlas.size().width;
   const int height = matchAtlas.size().height;
