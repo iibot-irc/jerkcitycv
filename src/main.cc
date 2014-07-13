@@ -57,6 +57,7 @@ int main(int argc, char** argv) {
   auto desc = po::options_description{"Allowed options"};
   desc.add_options()
     ("help", "this message")
+    ("debug-json", "print JSON formatted debug data to stderr")
     ("debug-file", po::value<std::string>(),  "file to store a .png with debug output")
     ("input-file", po::value<std::string>(), "input comic in png format");
 
@@ -74,14 +75,23 @@ int main(int argc, char** argv) {
   const auto& inFile = vm["input-file"].as<std::string>();
 
   auto ctx = Context{inFile, vm.count("debug-file") != 0};
+  ctx.debugJson = vm.count("debug-json") != 0;
 
   const std::string debugFile = vm.count("debug-file") ? vm["debug-file"].as<std::string>() : "";
+
+  if (ctx.debugJson) {
+    std::cerr << "{\n";
+  }
 
   try {
     process(ctx);
   } catch (...) {
     saveDebug(ctx, debugFile);
     throw;
+  }
+
+  if (ctx.debugJson) {
+    std::cerr << "}";
   }
 
   saveDebug(ctx, debugFile);

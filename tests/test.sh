@@ -1,9 +1,10 @@
 #!/bin/bash
 NUM=$1
+echo $NUM
 CHUNK=`awk "/^<issue num=\"$NUM\">$/{a=1;next}/<\/dialog>/{a=0}a" dialog.xml`
 EXPECTED=`echo "$CHUNK" | grep -m1 -A5000 '<dialog>' | tail -n +2`
 
-echo "<img src=\"http://jerkcity.com/jerkcity$NUM.gif\">" > out/$NUM.html
+echo "<img src=\"http://jerkcity.com/jerkcity$NUM.gif\"><img src=\"$NUM.debug.png\">" > out/$NUM.html
 
 if [ ! -f img/$NUM.png ]; then
   wget --quiet http://jerkcity.com/jerkcity$NUM.gif
@@ -11,10 +12,10 @@ if [ ! -f img/$NUM.png ]; then
   rm jerkcity$NUM.gif
 fi
 
-cd ../
-ACTUAL=`./jerkcity tests/img/$NUM.png 2>/dev/null | sed -e 's/ *$//' -e 's/^ *//'`
+cd ../src
+ACTUAL=`nice -n 5 timeout -s 9 10 ./jerkcity --debug-file=../tests/out/$NUM.debug.png --input-file=../tests/img/$NUM.png | sed -e 's/ *$//' -e 's/^ *//'`
 EX=$?
-cd tests
+cd ../tests
 
 if [[ $EX -ne 0 ]]; then
   echo "<a href=\"$NUM.html\" style=\"font-size: 20; display: block-inline; width: 5em; background: purple\">$NUM</a>" > out/$NUM.dat

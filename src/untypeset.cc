@@ -8,6 +8,7 @@ struct CharBox {
   bool wordBoundary = false; // Is this node at the end of a word? (i.e. does it need a space after it when derasterizing?)
   CharBox* next = nullptr;
   CharBox* prev = nullptr;
+  size_t id; // unique id for keeping track of things in debug output
 };
 
 // A StrBox points to the start and end of a CharBox list. It also caches the bounding rect for the entire list.
@@ -97,6 +98,22 @@ void drawDebugArrow(Context& ctx, CharBox* a, CharBox* b, cv::Scalar c) {
     cv::line(ctx.debugImg, { bx, by }, { bx - 3, by - 3 }, c, 1, CV_AA);
     cv::line(ctx.debugImg, { bx - 3, by + 3 }, { bx - 3, by - 3 }, c, 1, CV_AA);
   }
+}
+
+void printStrBoxDebug(Context& ctx, std::vector<StrBox>& boxes, const std::string& label) {
+  if (!ctx.debugJson) {
+    return;
+  }
+  std::cerr << "\t\"" << label << "\": [\n";
+  for (const auto& box : boxes) {
+    std::cerr << "\t\t[ ";
+    auto ptr = box.first;
+    do {
+      std::cerr << ptr->id << ", ";
+    } while((ptr = ptr->next) != nullptr);
+    std::cerr << "],\n";
+  }
+  std::cerr << "\t],\n";
 }
 
 template <class F>
@@ -262,7 +279,11 @@ bool glyphsConflict(std::vector<CharBox>& chars, int i, int j) {
   return intArea/iArea > kMaxOverlapAreaRatio || intArea/jArea > kMaxOverlapAreaRatio;
 }
 
-void filterConflictingGlyphs(std::vector<CharBox>& chars) {
+void filterConflictingGlyphs(Context& ctx, std::vector<CharBox>& chars) {
+  if (ctx.debugJson) {
+    std::cerr << "\t\"garbageGlyphs\": [\n";
+  }
+
   for (auto i = 0; i < (int)chars.size(); i++) {
     for (auto j = 0; j < (int)chars.size(); j++) {
       if (i == j) {
@@ -274,11 +295,18 @@ void filterConflictingGlyphs(std::vector<CharBox>& chars) {
       }
 
       auto killIndex = chars[i].score < chars[j].score ? j : i;
+      if (ctx.debugJson) {
+        std::cerr << "\t\t" << chars[killIndex].id << ",\n";
+      }
       chars.erase(chars.begin() + killIndex);
 
       i = 0;
       j = -1;
     }
+  }
+
+  if (ctx.debugJson) {
+    std::cerr << "\t],\n";
   }
 }
 
@@ -306,11 +334,17 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
 
   std::vector<CharBox> results;
 
+  if (ctx.debugJson) {
+    std::cerr << "\t\"chars\": [\n";
+  }
+
+  CharBox ch;
+  ch.id = 0;
+
   for(auto&& tmpl : templates) {
     auto matchAtlas = cv::Mat(cv::Size(ctx.img.size().width, ctx.img.size().height), CV_32F, 1);
     cv::matchTemplate(ctx.img, tmpl.img, matchAtlas, CV_TM_SQDIFF);
 
-    CharBox ch;
     ch.ch = tmpl.ch;
     ch.bounds = cv::Rect{{0, 0}, tmpl.img.size()};
 
@@ -318,6 +352,13 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
     int index = 0;
     while((index = getCredibleMatch(matchAtlas, index, ch.bounds, ch.score)) != -1 && results.size() < kMaxChars) {
       results.push_back(ch);
+      ch.id++;
+
+      if (ctx.debugJson) {
+        std::cerr << "\t\t{ \"ch\": \"" << ch.ch << ", \"id\": " << ch.id << ", \"score\": " << ch.score << ", ";
+        printRectJson(ch.bounds);
+        std::cerr << " },\n";
+      }
 
       // Clear out a ROI around the match we just found
       cv::rectangle(matchAtlas, ch.bounds, FLT_MAX, CV_FILLED);
@@ -326,6 +367,10 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
     if (results.size() >= kMaxChars) {
       throw std::runtime_error{"Whoa - too many characters. Something went wrong."};
     }
+  }
+
+  if (ctx.debugJson) {
+    std::cerr << "\t},\n";
   }
   return results;
 }
@@ -389,21 +434,25 @@ void untypeset(Context& ctx) {
     auto glyphs = loadTemplates("glyphs");
     charBoxes = findGlyphs(ctx, glyphs);
   }
-  filterConflictingGlyphs(charBoxes);
+  filterConflictingGlyphs(ctx, charBoxes);
 
   auto chunks = initStrBoxes(charBoxes);
 
   collectWords(ctx, chunks);
   checkRep(chunks);
+  printStrBoxDebug(ctx, chunks, "words");
 
   collectLines(ctx, chunks);
   checkRep(chunks);
+  printStrBoxDebug(ctx, chunks, "lines");
 
   filterGarbageLines(ctx, chunks);
   checkRep(chunks);
+  printStrBoxDebug(ctx, chunks, "filteredLines");
 
   collectBubbles(ctx, chunks);
   checkRep(chunks);
+  printStrBoxDebug(ctx, chunks, "bubbles");
 
   placeBubblesInPanels(ctx, chunks);
   sortBubblesInPanels(ctx);

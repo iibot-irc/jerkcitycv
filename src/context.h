@@ -29,6 +29,7 @@ struct Context {
   Context(const std::string& file, bool debug);
 
   bool debug;
+  bool debugJson;
   cv::Mat img;
   cv::Mat debugImg;
   std::vector<Panel> panels;
@@ -40,6 +41,10 @@ struct Template {
   char ch;
   cv::Mat img;
 };
+
+inline void printRectJson(const cv::Rect& bounds) {
+  std::cerr << "\"x\": " << bounds.x << ", \"y\": " << bounds.y << ", \"w\": " << bounds.width << ", \"h\": " << bounds.height;
+}
 
 std::vector<Template> loadTemplates(const std::string& pathStr);
 

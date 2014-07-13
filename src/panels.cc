@@ -109,6 +109,10 @@ void findPanels(Context& ctx) {
     throw std::runtime_error{"Finding the panels went horribly wrong"};
   }
 
+  if (ctx.debugJson) {
+    std::cerr << "\t\"panels\": [\n";
+  }
+
   // Collect panels, in sorted order
   for (auto yit = ys.begin(); yit != ys.end() - 1; ++yit) {
     for (auto xit = xs.begin(); xit != xs.end() - 1; ++xit) {
@@ -118,6 +122,15 @@ void findPanels(Context& ctx) {
       int32_t y1 = *(yit + 1);
       ASSERT(x0 < x1 && y0 < y1);
       ctx.panels.emplace_back(Panel{cv::Rect{x0, y0, x1 - x0, y1 - y0}});
+      if (ctx.debugJson) {
+        std::cerr << "\t\t{ ";
+        printRectJson(ctx.panels.back().bounds);
+        std::cerr << " },\n";
+      }
     }
+  }
+
+  if (ctx.debugJson) {
+    std::cerr << "\t],\n";
   }
 }

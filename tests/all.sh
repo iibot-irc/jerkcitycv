@@ -1,7 +1,7 @@
 #!/bin/bash
 
-MAX=5464
-PARALLEL=75
+MAX=500
+PARALLEL=3
 
 rm -rf out
 mkdir out
