@@ -3,6 +3,7 @@
 // A CharBox is a node in an intrusive doubly-linked list
 struct CharBox {
   char ch;
+  float score = FLT_MAX; // 0 is a perfect match, score is positive
   cv::Rect bounds;
   bool wordBoundary = false; // Is this node at the end of a word? (i.e. does it need a space after it when derasterizing?)
   CharBox* next = nullptr;
@@ -250,7 +251,39 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
   }
 }
 
-int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match) {
+bool glyphsConflict(std::vector<CharBox>& chars, int i, int j) {
+  const auto kMaxOverlapAreaRatio = 0.3f;
+
+  float iArea = chars[i].bounds.width * chars[i].bounds.height;
+  float jArea = chars[j].bounds.width * chars[j].bounds.height;
+
+  auto intersection = chars[i].bounds & chars[j].bounds;
+  float intArea = intersection.width * intersection.height;
+
+  return intArea/iArea > kMaxOverlapAreaRatio || intArea/jArea > kMaxOverlapAreaRatio;
+}
+
+void filterConflictingGlyphs(std::vector<CharBox>& chars) {
+  for (auto i = 0; i < (int)chars.size(); i++) {
+    for (auto j = 0; j < (int)chars.size(); j++) {
+      if (i == j) {
+        continue;
+      }
+
+      if (!glyphsConflict(chars, i, j)) {
+        continue;
+      }
+
+      auto killIndex = chars[i].score < chars[j].score ? j : i;
+      chars.erase(chars.begin() + killIndex);
+
+      i = 0;
+      j = -1;
+    }
+  }
+}
+
+int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match, float& score) {
   const float kCharMatchThresh = 100000.0;
 
   const int width = matchAtlas.size().width;
@@ -262,6 +295,7 @@ int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match) {
     if (data[i] < kCharMatchThresh) {
       match.x = i % width;
       match.y = i / width;
+      score = data[i];
       return startIndex + match.width - 1;
     }
   }
@@ -283,7 +317,7 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
 
     // Find all instances of this glyph
     int index = 0;
-    while((index = getCredibleMatch(matchAtlas, index, ch.bounds)) != -1 && results.size() < kMaxChars) {
+    while((index = getCredibleMatch(matchAtlas, index, ch.bounds, ch.score)) != -1 && results.size() < kMaxChars) {
       results.push_back(ch);
 
       // Clear out a ROI around the match we ju
@@ -341,6 +375,8 @@ void untypeset(Context& ctx) {
     auto glyphs = loadTemplates("glyphs");
     charBoxes = findGlyphs(ctx, glyphs);
   }
+
+  filterConflictingGlyphs(charBoxes);
 
   auto chunks = initStrBoxes(charBoxes);
 
