@@ -5,16 +5,17 @@ void drawDebugLine(Context& ctx, int x0, int y0, int x1, int y1) {
       cv::line(ctx.debugImg, { x0, y0 }, { x1, y1 }, { 0, 0, 255 }, 3);
     }
 }
+
 void findPanels(Context& ctx) {
   ASSERT(ctx.img.channels() == 1);
 
-  const size_t kSkipAmount = 80; // If we find a panel divider, skip 80 pixels for the next one.
+  const size_t kSkipAmount = 200; // If we find a panel divider, skip 80 pixels for the next one.
   const uint8_t kBasicallyWhite = 200; // Any value above this is to be considered "white"
 
   const size_t width = ctx.img.size().width;
   const size_t height = ctx.img.size().height;
 
-  if (width <= 2*kSkipAmount || height <= 2*kSkipAmount) {
+  if (width <= kSkipAmount || height <= kSkipAmount) {
     throw std::runtime_error{"Image is too small for these algorithms to work..."};
   }
 
@@ -26,13 +27,14 @@ void findPanels(Context& ctx) {
     size_t x;
     for (x = 0; x < width && data[x + y*width] >= kBasicallyWhite; x++) {}
 
+    // Ensure there is a divider above the top panels
+    if (ys.size() == 0 && y > kSkipAmount) {
+      ys.push_back(0);
+      drawDebugLine(ctx, 0, 0, x, 0);
+    }
+
     // If we made it to the right side of the image we've got a panel divider
     if (x == width) {
-      // Ensure there is a divider above the top panels
-      if (y > kSkipAmount && ys.size() == 0) {
-        ys.push_back(0);
-        drawDebugLine(ctx, 0, 0, x, 0);
-      }
       ys.push_back(y);
       drawDebugLine(ctx, 0, y, x, y);
 
@@ -42,7 +44,7 @@ void findPanels(Context& ctx) {
 
   // Find vertical lines
   const size_t kPointOfNoReturn = 150;
-  const size_t kUrgTolerance = 9;
+  const size_t kUrgTolerance = 7;
   size_t urgCounter = 0;
   std::vector<size_t> xs;
   for (size_t x = 0; x < width; x++) {
@@ -73,13 +75,14 @@ void findPanels(Context& ctx) {
       }
     }
 
+    // Ensure there is a divider to the left of the left-most panels
+    if (xs.size() == 0 && x > kSkipAmount) {
+      xs.push_back(0);
+      drawDebugLine(ctx, 0, 0, 0, y);
+    }
+
     // If we made it to the bottom of the image we've got a panel divider
     if (y == height) {
-      // Ensure there is a divider to the left of the left-most panels
-      if (x > kSkipAmount && xs.size() == 0) {
-        xs.push_back(0);
-        drawDebugLine(ctx, 0, 0, 0, y);
-      }
       xs.push_back(x);
       drawDebugLine(ctx, x, 0, x, y);
 
@@ -88,11 +91,13 @@ void findPanels(Context& ctx) {
   }
 
   // Ensure there is a divider to the right of the right-most panels
+  assert(xs.size() > 0);
   if (xs.back() < width - kSkipAmount) {
     xs.push_back(width - 1);
     drawDebugLine(ctx, width - 1, 0, width - 1, height);
   }
-  // Esnure there is a divider below the bottom panels
+  // Ensure there is a divider below the bottom panels
+  assert(ys.size() > 0);
   if (ys.back() < height - kSkipAmount) {
     ys.push_back(height - 1);
     drawDebugLine(ctx, 0, height - 1, width, height - 1);

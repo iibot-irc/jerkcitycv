@@ -161,7 +161,7 @@ auto horizCollector(Context& ctx, std::vector<StrBox>& elems, const int kXSpacin
 }
 
 void collectWords(Context& ctx, std::vector<StrBox>& chars) {
-  const auto kIntraWordXSpacing = 2;
+  const auto kIntraWordXSpacing = 3;
   collect(chars, horizCollector(ctx, chars, kIntraWordXSpacing, false, { 255, 127, 127 }));
 }
 
@@ -320,7 +320,7 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
     while((index = getCredibleMatch(matchAtlas, index, ch.bounds, ch.score)) != -1 && results.size() < kMaxChars) {
       results.push_back(ch);
 
-      // Clear out a ROI around the match we ju
+      // Clear out a ROI around the match we just found
       cv::rectangle(matchAtlas, ch.bounds, FLT_MAX, CV_FILLED);
       if (ctx.debug) { cv::rectangle(ctx.debugImg, ch.bounds, {0, 0, 0}, CV_FILLED); }
     }
@@ -375,7 +375,6 @@ void untypeset(Context& ctx) {
     auto glyphs = loadTemplates("glyphs");
     charBoxes = findGlyphs(ctx, glyphs);
   }
-
   filterConflictingGlyphs(charBoxes);
 
   auto chunks = initStrBoxes(charBoxes);
