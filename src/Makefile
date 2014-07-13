@@ -7,6 +7,7 @@ LDFLAGS=-lboost_program_options -lboost_filesystem -lboost_system `pkg-config --
 
 all:
 	$(CXX) -o $(EXECUTABLE) $(CFLAGS) *.cc $(LDFLAGS)
+	@echo done
 
 clean:
 	rm -f $(EXECUTABLE)

@@ -161,7 +161,7 @@ auto horizCollector(Context& ctx, std::vector<StrBox>& elems, const int kXSpacin
 }
 
 void collectWords(Context& ctx, std::vector<StrBox>& chars) {
-  const auto kIntraWordXSpacing = 4;
+  const auto kIntraWordXSpacing = 2;
   collect(chars, horizCollector(ctx, chars, kIntraWordXSpacing, false, { 255, 127, 127 }));
 }
 

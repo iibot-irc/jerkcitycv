@@ -36,6 +36,11 @@ void process(Context& ctx) {
   untypeset(ctx);
   attributeDialog(ctx);
 
+  for (auto& panel : ctx.panels) { // TODO should only look in panel 0 but we arent sorting yet
+    if (panel.dialog.size() == 1 && panel.dialog[0].contents == "STARRING") {
+      panel.dialog.clear();
+    }
+  }
   for (const auto& panel : ctx.panels) {
     for (const auto& bubble : panel.dialog) {
       std::cout << bubble.actor << ": " << bubble.contents << "\n";
