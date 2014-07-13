@@ -230,7 +230,7 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
     do {
       switch (ptr->ch) {
         case '-': case '.': case '=': case '/': case '\\': case '\'': case '"':
-        case '|': case ':': case ';': case ',': case 'L': case 'P':
+        case '|': case ':': case ';': case ',': case 'L': case 'P': case 'T':
           questionableChars++;
       }
     } while ((ptr = ptr->next) != nullptr && ++length <= kMaxSuspiciousLength);
@@ -251,7 +251,7 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
 }
 
 bool glyphsConflict(std::vector<CharBox>& chars, int i, int j) {
-  const auto kMaxOverlapAreaRatio = 0.3f;
+  const auto kMaxOverlapAreaRatio = 0.4f;
 
   float iArea = chars[i].bounds.width * chars[i].bounds.height;
   float jArea = chars[j].bounds.width * chars[j].bounds.height;
