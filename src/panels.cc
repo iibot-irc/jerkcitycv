@@ -9,7 +9,7 @@ void drawDebugLine(Context& ctx, int x0, int y0, int x1, int y1) {
 void findPanels(Context& ctx) {
   ASSERT(ctx.img.channels() == 1);
 
-  const size_t kSkipAmount = 200; // If we find a panel divider, skip 80 pixels for the next one.
+  const size_t kSkipAmount = 100; // If we find a panel divider, skip 80 pixels for the next one.
   const uint8_t kBasicallyWhite = 200; // Any value above this is to be considered "white"
 
   const size_t width = ctx.img.size().width;

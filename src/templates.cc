@@ -28,6 +28,7 @@ std::vector<Template> loadTemplates(const std::string& pathStr) {
 
     auto label = file.stem().string();
     label = label.substr(0, label.find("."));
+    label = label == "dot" ? "." : label;
     if (label.size() != 1) {
       throw std::runtime_error{"Bad template label, only one character supported: " + label};
     }
