@@ -314,6 +314,13 @@ std::string strBoxToString(const StrBox& strBox) {
   return result;
 }
 
+bool inPanel(const Panel& panel, const StrBox& strBox) {
+  auto intersection = panel.bounds & strBox.bounds;
+  float intersectionArea = intersection.width * intersection.height;
+  float strBoxArea = strBox.bounds.width * strBox.bounds.height;
+  return intersectionArea/strBoxArea >= 0.5f;
+}
+
 void untypeset(Context& ctx) {
   std::vector<CharBox> charBoxes;
   {
@@ -337,6 +344,14 @@ void untypeset(Context& ctx) {
 
   for (auto strBox : chunks) {
     auto contents = strBoxToString(strBox);
-    std::cout << contents << "\n";
+    auto placed = false;
+    for (auto& panel : ctx.panels) {
+      if (inPanel(panel, strBox)) {
+        panel.dialog.emplace_back(contents, strBox.bounds);
+        placed = true;
+        break;
+      }
+    }
+    ASSERT(placed);
   }
 }

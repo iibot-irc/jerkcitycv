@@ -12,6 +12,8 @@ inline void threshold(cv::Mat img) {
 }
 
 struct Bubble {
+  Bubble(std::string contents_, cv::Rect bounds_) : contents{contents_}, bounds{bounds_} {}
+
   std::string contents;
   std::string author;
   cv::Rect bounds;
