@@ -103,8 +103,6 @@ void collect(std::vector<StrBox>& chunks, F attemptToJoin) {
   for (size_t i = 0; i < chunks.size(); i++) {
     for (size_t j = 0; j < chunks.size(); j++) {
       if (i == j) { continue; }
-      chunks[i].checkRep();
-      chunks[j].checkRep();
 
       auto which = attemptToJoin(i, j);
       if (which == -1) { continue; }
