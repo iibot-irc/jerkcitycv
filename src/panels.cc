@@ -1,6 +1,6 @@
 #include "context.h"
 
-void debugLine(Context& ctx, int x0, int y0, int x1, int y1) {
+void drawDebugLine(Context& ctx, int x0, int y0, int x1, int y1) {
     if (ctx.debug) {
       cv::line(ctx.debugImg, { x0, y0 }, { x1, y1 }, { 0, 0, 255 }, 3);
     }
@@ -31,10 +31,10 @@ void findPanels(Context& ctx) {
       // Ensure there is a divider above the top panels
       if (y > kSkipAmount && ys.size() == 0) {
         ys.push_back(0);
-        debugLine(ctx, 0, 0, x, 0);
+        drawDebugLine(ctx, 0, 0, x, 0);
       }
       ys.push_back(y);
-      debugLine(ctx, 0, y, x, y);
+      drawDebugLine(ctx, 0, y, x, y);
 
       y += kSkipAmount;
     }
@@ -78,10 +78,10 @@ void findPanels(Context& ctx) {
       // Ensure there is a divider to the left of the left-most panels
       if (x > kSkipAmount && xs.size() == 0) {
         xs.push_back(0);
-        debugLine(ctx, 0, 0, 0, y);
+        drawDebugLine(ctx, 0, 0, 0, y);
       }
       xs.push_back(x);
-      debugLine(ctx, x, 0, x, y);
+      drawDebugLine(ctx, x, 0, x, y);
 
       x += kSkipAmount;
     }
@@ -90,12 +90,12 @@ void findPanels(Context& ctx) {
   // Ensure there is a divider to the right of the right-most panels
   if (xs.back() < width - kSkipAmount) {
     xs.push_back(width - 1);
-    debugLine(ctx, width - 1, 0, width - 1, height);
+    drawDebugLine(ctx, width - 1, 0, width - 1, height);
   }
   // Esnure there is a divider below the bottom panels
   if (ys.back() < height - kSkipAmount) {
     ys.push_back(height - 1);
-    debugLine(ctx, 0, height - 1, width, height - 1);
+    drawDebugLine(ctx, 0, height - 1, width, height - 1);
   }
 
   // Would be possible to construct an image such that this gets thrown.
