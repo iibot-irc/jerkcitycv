@@ -109,7 +109,7 @@ void findPanels(Context& ctx) {
     throw std::runtime_error{"Finding the panels went horribly wrong"};
   }
 
-  // Collect panels
+  // Collect panels, in sorted order
   for (auto yit = ys.begin(); yit != ys.end() - 1; ++yit) {
     for (auto xit = xs.begin(); xit != xs.end() - 1; ++xit) {
       int32_t x0 = *xit;

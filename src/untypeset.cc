@@ -147,7 +147,6 @@ auto horizCollector(Context& ctx, std::vector<StrBox>& elems, const int kXSpacin
     auto xDist = std::abs(bx - ax); // abs because chars can slightly penetrate
     auto yDist = std::abs(by - ay);
 
-    //std::cout << xDist << " " << yDist << "\n";
     if (xDist > kXSpacing || yDist > kYSpacing) {
       return -1;
     }
@@ -231,8 +230,8 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
     do {
       switch (ptr->ch) {
         case '-': case '.': case '=': case '/': case '\\': case '\'': case '"':
-        case '|': case ':': case ';': case ',': questionableChars++; break;
-        default: break;
+        case '|': case ':': case ';': case ',': case 'L': case 'P':
+          questionableChars++;
       }
     } while ((ptr = ptr->next) != nullptr && ++length <= kMaxSuspiciousLength);
 
@@ -350,7 +349,7 @@ float portionInPanel(const Panel& panel, const StrBox& strBox) {
   auto intersection = panel.bounds & strBox.bounds;
   float intersectionArea = intersection.width * intersection.height;
   float strBoxArea = strBox.bounds.width * strBox.bounds.height;
-  return intersectionArea/strBoxArea;
+  return strBoxArea - intersectionArea;
 }
 
 void placeBubblesInPanels(Context& ctx, std::vector<StrBox>& bubbles) {
@@ -365,7 +364,22 @@ void placeBubblesInPanels(Context& ctx, std::vector<StrBox>& bubbles) {
         minIndex = i;
       }
     }
+    assert(minIndex != -1);
     ctx.panels[minIndex].dialog.emplace_back(contents, strBox.bounds);
+    cv::rectangle(ctx.debugImg, ctx.panels[0].bounds, cv::Scalar(0, 255, 0), CV_FILLED);
+  }
+}
+
+void sortBubblesInPanels(Context& ctx) {
+  for (auto& panel : ctx.panels) {
+    std::sort(panel.dialog.begin(), panel.dialog.end(), [](Bubble& a, Bubble& b) {
+      const auto kAlmostSameHeight = 5;
+      if (std::abs(a.bounds.y - b.bounds.y) <= kAlmostSameHeight) {
+        return a.bounds.x < b.bounds.x;
+      } else {
+        return a.bounds.y < b.bounds.y;
+      }
+    });
   }
 }
 
@@ -392,4 +406,5 @@ void untypeset(Context& ctx) {
   checkRep(chunks);
 
   placeBubblesInPanels(ctx, chunks);
+  sortBubblesInPanels(ctx);
 }
