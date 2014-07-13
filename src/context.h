@@ -28,8 +28,6 @@ struct Panel {
 struct Context {
   Context(const std::string& file, bool debug);
 
-  void saveDebug(const std::string& file);
-
   bool debug;
   cv::Mat img;
   cv::Mat debugImg;

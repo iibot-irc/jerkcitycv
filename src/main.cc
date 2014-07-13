@@ -25,9 +25,9 @@ Context::Context(const std::string& file, bool debug_) : debug{debug_} {
   }
 }
 
-void Context::saveDebug(const std::string& file) {
-  if (debug) {
-    cv::imwrite(file.c_str(), debugImg);
+void saveDebug(const Context& ctx, const std::string& file) {
+  if (cv.debug) {
+    cv::imwrite(file.c_str(), cv.debugImg);
   }
 }
 
@@ -60,9 +60,9 @@ int main(int argc, char** argv) {
     findPanels(ctx);
     untypeset(ctx);
   } catch (...) {
-    ctx.saveDebug(debugFile);
+    saveDebug(ctx, debugFile);
     throw;
   }
 
-  ctx.saveDebug(debugFile);
+  saveDebug(ctx, debugFile);
 }
