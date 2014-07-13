@@ -51,7 +51,7 @@ void findPanels(Context& ctx) {
       if (data[x + y*width] < kBasicallyWhite) {
         #ifdef RED_KICKSTARTER_FOOTER
         // hack: during the BBoJC Kickstarter a red footer was applied to each comic
-        if (y > width - 30) {
+        if (y > height - 30) {
           y = height;
           break;
         }
