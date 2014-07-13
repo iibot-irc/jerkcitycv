@@ -234,9 +234,9 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
         case '|': case ':': case ';': case ',': questionableChars++; break;
         default: break;
       }
-    } while ((ptr = ptr->next) != nullptr && length++ <= kMaxSuspiciousLength);
+    } while ((ptr = ptr->next) != nullptr && ++length <= kMaxSuspiciousLength);
 
-    if (length > kMaxSuspiciousLength || questionableChars != length) {
+    if (length > kMaxSuspiciousLength || questionableChars != length + 1) {
       continue;
     }
 
