@@ -15,7 +15,7 @@ struct Bubble {
   Bubble(std::string contents_, cv::Rect bounds_) : contents{contents_}, bounds{bounds_} {}
 
   std::string contents;
-  std::string author;
+  std::string actor;
   cv::Rect bounds;
 };
 

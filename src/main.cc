@@ -8,6 +8,7 @@
 
 void findPanels(Context& ctx);
 void untypeset(Context& ctx);
+void attributeDialog(Context& ctx);
 
 Context::Context(const std::string& file, bool debug_) : debug{debug_} {
   img = cv::imread(file, CV_LOAD_IMAGE_GRAYSCALE);
@@ -21,13 +22,24 @@ Context::Context(const std::string& file, bool debug_) : debug{debug_} {
     if (debugImg.dims == 0) {
       throw std::runtime_error{"Couldn't load debug image: " + file};
     }
-  //  threshold(debugImg);
   }
 }
 
 void saveDebug(const Context& ctx, const std::string& file) {
-  if (cv.debug) {
-    cv::imwrite(file.c_str(), cv.debugImg);
+  if (ctx.debug) {
+    cv::imwrite(file.c_str(), ctx.debugImg);
+  }
+}
+
+void process(Context& ctx) {
+  findPanels(ctx);
+  untypeset(ctx);
+  attributeDialog(ctx);
+
+  for (const auto& panel : ctx.panels) {
+    for (const auto& bubble : panel.dialog) {
+      std::cout << bubble.actor << ": " << bubble.contents << "\n";
+    }
   }
 }
 
@@ -57,8 +69,7 @@ int main(int argc, char** argv) {
   const std::string debugFile = vm.count("debug-file") ? vm["debug-file"].as<std::string>() : "";
 
   try {
-    findPanels(ctx);
-    untypeset(ctx);
+    process(ctx);
   } catch (...) {
     saveDebug(ctx, debugFile);
     throw;
