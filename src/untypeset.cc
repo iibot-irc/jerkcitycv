@@ -251,7 +251,7 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
 }
 
 int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match) {
-  const float kCharMatchThresh = 2.0;
+  const float kCharMatchThresh = 100000.0;
 
   const int width = matchAtlas.size().width;
   const int height = matchAtlas.size().height;
@@ -312,11 +312,27 @@ std::string strBoxToString(const StrBox& strBox) {
   return result;
 }
 
-bool inPanel(const Panel& panel, const StrBox& strBox) {
+float portionInPanel(const Panel& panel, const StrBox& strBox) {
   auto intersection = panel.bounds & strBox.bounds;
   float intersectionArea = intersection.width * intersection.height;
   float strBoxArea = strBox.bounds.width * strBox.bounds.height;
-  return intersectionArea/strBoxArea >= 0.5f;
+  return intersectionArea/strBoxArea;
+}
+
+void placeBubblesInPanels(Context& ctx, std::vector<StrBox>& bubbles) {
+  for (auto strBox : bubbles) {
+    auto contents = strBoxToString(strBox);
+    auto minSoFar = FLT_MAX;
+    auto minIndex = -1;
+    for (size_t i = 0; i < ctx.panels.size(); i++) {
+      auto portion = portionInPanel(ctx.panels[i], strBox);
+      if (portion < minSoFar) {
+        minSoFar = portion;
+        minIndex = i;
+      }
+    }
+    ctx.panels[minIndex].dialog.emplace_back(contents, strBox.bounds);
+  }
 }
 
 void untypeset(Context& ctx) {
@@ -340,16 +356,5 @@ void untypeset(Context& ctx) {
   collectBubbles(ctx, chunks);
   checkRep(chunks);
 
-  for (auto strBox : chunks) {
-    auto contents = strBoxToString(strBox);
-    auto placed = false;
-    for (auto& panel : ctx.panels) {
-      if (inPanel(panel, strBox)) {
-        panel.dialog.emplace_back(contents, strBox.bounds);
-        placed = true;
-        break;
-      }
-    }
-    ASSERT(placed);
-  }
+  placeBubblesInPanels(ctx, chunks);
 }
