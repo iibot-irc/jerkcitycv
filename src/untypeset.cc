@@ -345,7 +345,11 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
     auto matchAtlas = cv::Mat(cv::Size(ctx.img.size().width, ctx.img.size().height), CV_32F, 1);
     cv::matchTemplate(ctx.img, tmpl.img, matchAtlas, CV_TM_SQDIFF);
 
-    ch.ch = tmpl.ch;
+    if (tmpl.name.size() != 1) {
+      throw std::runtime_error{"Char templates must have a name that is exactly one ascii char."};
+    }
+
+    ch.ch = tmpl.name[0];
     ch.bounds = cv::Rect{{0, 0}, tmpl.img.size()};
 
     // Find all instances of this glyph

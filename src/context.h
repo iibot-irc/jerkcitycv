@@ -36,9 +36,9 @@ struct Context {
 };
 
 struct Template {
-  Template(char ch_, cv::Mat img_) : ch{ch_}, img{img_} {}
+  Template(std::string name_, cv::Mat img_) : name{name_}, img{img_} {}
 
-  char ch;
+  std::string name;
   cv::Mat img;
 };
 
