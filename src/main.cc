@@ -15,7 +15,6 @@ Context::Context(const std::string& file, bool debug_) : debug{debug_} {
   if (img.dims == 0) {
     throw std::runtime_error{"Couldn't load: " + file};
   }
-  //threshold(img);
 
   if (debug) {
     debugImg = cv::imread(file, CV_LOAD_IMAGE_COLOR);

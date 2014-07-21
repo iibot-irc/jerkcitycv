@@ -23,9 +23,6 @@ std::vector<Template> loadTemplates(const std::string& pathStr) {
       throw std::runtime_error{"Could not open template " + file.string()};
     }
 
-    // this doesn't work well: threshold(img);
-    //threshold(img);
-
     auto label = file.stem().string();
     label = label.substr(0, label.find("."));
     label = label == "dot" ? "." : label; // This is a hack for the "." char

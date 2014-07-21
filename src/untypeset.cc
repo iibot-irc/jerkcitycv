@@ -415,7 +415,6 @@ void placeBubblesInPanels(Context& ctx, std::vector<StrBox>& bubbles) {
     }
     assert(minIndex != -1);
     ctx.panels[minIndex].dialog.emplace_back(contents, strBox.bounds);
-    cv::rectangle(ctx.debugImg, ctx.panels[0].bounds, cv::Scalar(0, 255, 0), CV_FILLED);
   }
 }
 

@@ -9,7 +9,7 @@ void drawDebugLine(Context& ctx, int x0, int y0, int x1, int y1) {
 void findPanels(Context& ctx) {
   ASSERT(ctx.img.channels() == 1);
 
-  const size_t kSkipAmount = 100; // If we find a panel divider, skip 80 pixels for the next one.
+  const size_t kSkipAmount = 50; // If we find a panel divider, skip 80 pixels for the next one.
   const uint8_t kBasicallyWhite = 200; // Any value above this is to be considered "white"
 
   const size_t width = ctx.img.size().width;
@@ -45,11 +45,12 @@ void findPanels(Context& ctx) {
   // Find vertical lines
   const size_t kPointOfNoReturn = 150;
   const size_t kUrgTolerance = 7;
+  const size_t kYFloor = 3; // Some comics have a bar across the top
   size_t urgCounter = 0;
   std::vector<size_t> xs;
   for (size_t x = 0; x < width; x++) {
     size_t y;
-    for (y = 0; y < height; y++) {
+    for (y = kYFloor; y < height; y++) {
       if (data[x + y*width] < kBasicallyWhite) {
         #ifdef RED_KICKSTARTER_FOOTER
         // hack: during the BBoJC Kickstarter a red footer was applied to each comic
@@ -132,5 +133,10 @@ void findPanels(Context& ctx) {
 
   if (ctx.debugJson) {
     std::cerr << "\t],\n";
+  }
+
+  cv::rectangle(ctx.img, ctx.panels[0].bounds, cv::Scalar(0, 255, 0), CV_FILLED);
+  if (ctx.debug) {
+    cv::rectangle(ctx.debugImg, ctx.panels[0].bounds, cv::Scalar(0, 255, 0), CV_FILLED);
   }
 }
