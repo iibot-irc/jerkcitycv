@@ -1,78 +1,35 @@
 #include "context.h"
 
-#include <opencv2/nonfree/nonfree.hpp>
+std::string findActor(cv::Mat);
 
-void findFeatures(cv::Mat img, std::vector<cv::KeyPoint>& outKeypoints, cv::Mat& outDescriptors) {
-  const int kMinHessian = 400;
-  auto detector = cv::SurfFeatureDetector{kMinHessian};
-  detector.detect(img, outKeypoints);
-
-  auto extractor = cv::SurfDescriptorExtractor{};
-  extractor.compute(img, outKeypoints, outDescriptors);
-}
-
-struct ActorTemplate {
-  ActorTemplate(const Template& genericTemplate) {
-    findFeatures(genericTemplate.img, keypoints, descriptors);
-    ASSERT(!descriptors.empty(), "no features detected in this actor template!");
-    name = genericTemplate.name;
-    img = genericTemplate.img;
-  }
-
-  cv::Mat img;
-  std::vector<cv::KeyPoint> keypoints;
-  cv::Mat descriptors;
-  std::string name;
-};
-
-std::string findActor(Context& ctx, cv::Mat img, const std::vector<ActorTemplate>& actorTmpls) {
-  auto keypoints = std::vector<cv::KeyPoint>{};
-  auto descriptors = cv::Mat{};
-
-  findFeatures(img, keypoints, descriptors);
-
-  if (descriptors.empty()) {
-    return "unknown";
-  }
-
-  std::vector<std::pair<double, const ActorTemplate&>> actorMatches;
-
-  for (const auto& actor : actorTmpls) {
-    auto matcher = cv::FlannBasedMatcher{};
-    auto matches = std::vector<cv::DMatch>{};
-    matcher.match(actor.descriptors, descriptors, matches);
-
-    auto bounds = std::minmax_element(matches.begin(), matches.end(), [](const auto& a, const auto& b) {
-      return a.distance < b.distance;
-    });
-    float minDist = std::min(0.25f, std::max(2.0f*bounds.first->distance, 0.02f));
-
-    auto goodMatches = std::vector<cv::DMatch>{};
-    std::copy_if(matches.begin(), matches.end(), std::back_inserter(goodMatches), [minDist](const auto& m) {
-      return m.distance <= minDist;
-    });
-
-    double score = (double)goodMatches.size()/(double)matches.size();
-    if (score > 0.25f) {
-      actorMatches.emplace_back(score, actor);
-      //std::cerr << actor.name << ": " << goodMatches.size() << " out of " << matches.size() << ": " << score << "\n";
+void customThreshImg(cv::Mat img) {
+  for (int y = 5; y < img.rows - 5; y++) {
+    for (int x = 5; x < img.cols - 5; x++) {
+      auto val = img.at<uint8_t>(y, x);
+      if(val > 5 && val < 250) {
+        for (int yy = std::max(0, y - 2); yy < std::min(img.rows, y + 2); yy++) {
+          for (int xx = std::max(0, x - 2); xx < std::min(img.cols, x + 2); xx++) {
+            auto& val = img.at<uint8_t>(yy, xx);
+            if ((yy < y || val > 5) && val < 250) {
+              val = 127;
+            }
+          }
+        }
+      }
     }
   }
-
-  if (actorMatches.empty()) {
-    return "unknown";
+  for (int y = 0; y < img.rows; y++) {
+    for (int x = 0; x < img.cols; x++) {
+      auto& val = img.at<uint8_t>(y, x);
+      if (val == 127) {
+        val = 255;
+      }
+    }
   }
-
-  return std::max_element(actorMatches.begin(), actorMatches.end(), [](const auto& a, const auto& b) { return a.first < b.first; })->second.name;
+  cv::imwrite("/home/j3parker/www/scratch/out4.png", img);
 }
 
 void attributeDialog(Context& ctx) {
-  auto actorTmpls = std::vector<ActorTemplate>{};
-  {
-    auto genericTmpls = loadTemplates("actors");
-    actorTmpls = std::vector<ActorTemplate>(genericTmpls.begin(), genericTmpls.end());
-  }
-
   for (size_t i = 0; i < ctx.panels.size(); i++) {
     const auto& panel = ctx.panels[i];
 
@@ -81,9 +38,10 @@ void attributeDialog(Context& ctx) {
     panelBounds.y += panel.bounds.height / 3;
     panelBounds.height *= 2.0f/3.0f;
     auto panelImg = cv::Mat{ctx.img, panelBounds};
+    //customThreshImg(panelImg);
 
     for (auto&& bubble : ctx.panels[i].dialog) {
-      bubble.actor = findActor(ctx, panelImg, actorTmpls);
+      bubble.actor = findActor(panelImg);
     }
 
   }
