@@ -217,7 +217,8 @@ bool intervalIntersects(int a0, int a1, int b0, int b1) {
 std::string getBoundaryWordChars(StrBox a, bool forward) {
   auto ptr = forward ? a.first : a.last;
   std::string str;
-  while (ptr != nullptr && ptr->ch != ' ') {
+  ASSERT(ptr != nullptr);
+  while (ptr != nullptr && !ptr->wordBoundary) {
     if (forward) {
       str = str + ptr->ch;
       ptr = ptr->next;
