@@ -1,16 +1,25 @@
+TARGET   = jerkcity
+CXXFLAGS = -g -O3 --std=c++1y
+LDFLAGS  = `pkg-config --libs opencv` -lboost_program_options -lboost_filesystem -lboost_system
+
 CXX=clang++
-EXECUTABLE=jerkcity
-CFLAGS=--std=c++1y -O3 -g -Wall -Wextra
-LDFLAGS=-lboost_program_options -lboost_filesystem -lboost_system `pkg-config --libs opencv`
+OBJDIR=_obj
 
-.PHONY: clean tags
+SOURCES = $(wildcard *.cc) $(wildcard */*.cc)
+OBJECTS = $(addprefix $(OBJDIR)/,$(SOURCES:.cc=.o))
 
-all:
-	$(CXX) -o $(EXECUTABLE) $(CFLAGS) *.cc $(LDFLAGS)
-	@echo done
+.PHONY: clean all
+
+all: $(TARGET)
 
 clean:
-	rm -f $(EXECUTABLE)
+	rm -rf $(OBJDIR)
 
-tags:
-	ctags -R
+$(OBJDIR)/%.o: %.cc
+	@mkdir -p $(OBJDIR)/`dirname $<`
+	@echo Compiling $<
+	@$(CXX) -o $@ -c $(CXXFLAGS) $<
+
+$(TARGET): $(OBJECTS)
+	@echo Linking $@
+	@$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
