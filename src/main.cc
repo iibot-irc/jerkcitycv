@@ -37,7 +37,10 @@ void hackOutStarringPanel(Context& ctx) {
 void printComic(Context& ctx) {
   for (const auto& panel : ctx.panels) {
     for (const auto& bubble : panel.dialog) {
-      std::cout << bubble.actor << ": " << bubble.contents << "\n";
+      if (bubble.actor != "") {
+        std::cout << bubble.actor << ": ";
+      }
+      std::cout << bubble.contents << "\n";
     }
   }
 }
