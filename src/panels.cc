@@ -11,6 +11,7 @@ void findPanels(Context& ctx) {
 
   const size_t kSkipAmount = 50; // If we find a panel divider, skip 80 pixels for the next one.
   const uint8_t kBasicallyWhite = 200; // Any value above this is to be considered "white"
+  const uint8_t kBasicallllllllyWhite = 127;
 
   const size_t width = ctx.img.size().width;
   const size_t height = ctx.img.size().height;
@@ -25,7 +26,9 @@ void findPanels(Context& ctx) {
   std::vector<size_t> ys;
   for (size_t y = 0; y < height; y++) {
     size_t x;
-    for (x = 0; x < width && data[x + y*width] >= kBasicallyWhite; x++) {}
+    for (x = 0;
+        x < width && data[x + y*width] >= (ys.size() > 1 ? kBasicallyWhite : kBasicallllllllyWhite);
+        x++) {}
 
     // Ensure there is a divider above the top panels
     if (ys.size() == 0 && y > kSkipAmount) {
