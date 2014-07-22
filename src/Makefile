@@ -5,7 +5,7 @@ LDFLAGS  = `pkg-config --libs opencv` -lboost_program_options -lboost_filesystem
 CXX=clang++
 OBJDIR=_obj
 
-SOURCES = $(wildcard *.cc) $(wildcard */*.cc)
+SOURCES = $(wildcard *.cc) $(wildcard */*.cc) # note: only goes one deep. TODO: find copy of this Makefile that went infinitely deep
 OBJECTS = $(addprefix $(OBJDIR)/,$(SOURCES:.cc=.o))
 DEPS    = $(OBJECTS:.o=.d)
 
