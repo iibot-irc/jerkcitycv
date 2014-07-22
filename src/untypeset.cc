@@ -214,6 +214,24 @@ bool intervalIntersects(int a0, int a1, int b0, int b1) {
   }
 }
 
+std::string getBoundaryWordChars(StrBox a, bool forward) {
+  auto ptr = forward ? a.first : a.last;
+  std::string str;
+  while (ptr != nullptr && ptr->ch != ' ') {
+    if (forward) {
+      str = str + ptr->ch;
+      ptr = ptr->next;
+    } else {
+      str = ptr->ch + str; // hurt me plenty!
+      ptr = ptr->prev;
+    }
+  }
+
+  std::sort(str.begin(), str.end());
+  str.erase(std::unique(str.begin(), str.end()), str.end());
+  return str;
+}
+
 void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
   const auto kInterLineSpacing = 5;
   collect(lines, [&](int i, int j) {
@@ -233,7 +251,11 @@ void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
       return -1;
     }
 
-    merge(a, b, true);
+    // Hack: Long strings like "HGHLGUHGLHGUHLUGHGLGHU" get split midway through - don't insert a space if this looks to be the case
+    auto lastCharsInA = getBoundaryWordChars(a, false);
+    auto firstCharsInB = getBoundaryWordChars(b, true);
+
+    merge(a, b, lastCharsInA.size() > 6 || lastCharsInA != firstCharsInB);
 
     return j;
   });
