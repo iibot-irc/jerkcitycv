@@ -43,7 +43,7 @@ void findPanels(Context& ctx) {
   }
 
   // Find vertical lines
-  const size_t kPointOfNoReturn = 150;
+  const size_t kPointOfNoReturn = 250;
   const size_t kUrgTolerance = 7;
   const size_t kYFloor = 3; // Some comics have a bar across the top
   size_t urgCounter = 0;
@@ -68,7 +68,7 @@ void findPanels(Context& ctx) {
         // If we are near the top of the image, permit some amount of non-white chars
         // This allows the line to "tunnel through" the title text which sometimes
         // overflows panel 1.
-        if (urgCounter++ > kUrgTolerance) {
+        if (xs.size() > 1 || urgCounter++ > kUrgTolerance) {
           break;
         }
       } else {
