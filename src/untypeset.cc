@@ -1,5 +1,7 @@
 #include "context.h"
 
+#include <boost/algorithm/string/replace.hpp>
+
 // A CharBox is a node in an intrusive doubly-linked list
 struct CharBox {
   char ch;
@@ -262,6 +264,7 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
     do {
       switch (ptr->ch) {
         case '-':
+        case '_':
         case '.':
         case '=':
         case '/':
@@ -276,6 +279,7 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
         case 'P':
         case 'T':
         case '!':
+        case '*':
           questionableChars++;
       }
     } while ((ptr = ptr->next) != nullptr && ++length <= kMaxSuspiciousLength);
@@ -428,6 +432,16 @@ std::string strBoxToString(const StrBox& strBox) {
       result += " ";
     }
   } while ((ptr = ptr->next) != nullptr);
+
+  // Hack: its hard to tell the difference between , and .
+  // I've got some ideas on how to handle this better, but this is a pragmatic
+  // option for getting correct "......." content (which appears to be common)
+  std::string oldResult;
+  do {
+    oldResult = result;
+    boost::replace_all(result, ",.", "..");
+    boost::replace_all(result, ".,", "..");
+  } while (oldResult != result);
 
   return result;
 }
