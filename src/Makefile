@@ -7,10 +7,13 @@ OBJDIR=_obj
 
 SOURCES = $(wildcard *.cc) $(wildcard */*.cc)
 OBJECTS = $(addprefix $(OBJDIR)/,$(SOURCES:.cc=.o))
-
-.PHONY: clean all
+DEPS    = $(OBJECTS:.o=.d)
 
 all: $(TARGET)
+
+-include $(DEPS)
+
+.PHONY: clean all
 
 clean:
 	rm -rf $(OBJDIR)
@@ -18,7 +21,7 @@ clean:
 $(OBJDIR)/%.o: %.cc
 	@mkdir -p $(OBJDIR)/`dirname $<`
 	@echo Compiling $<
-	@$(CXX) -o $@ -c $(CXXFLAGS) $<
+	@$(CXX) -c $(CXXFLAGS) -MMD -MP -o $@ $<
 
 $(TARGET): $(OBJECTS)
 	@echo Linking $@
