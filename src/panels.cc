@@ -29,7 +29,8 @@ void findPanels(Context& ctx) {
   std::vector<size_t> ys;
   for (size_t y = 0; y < height; y++) {
     size_t x;
-    for (x = 0; x < width && data[x + y * width] >=
+    // Hack: start at 1 because some comics have a 1px left border
+    for (x = 1; x < width && data[x + y * width] >=
                                  (ys.size() > 1 ? kBasicallyWhite
                                                 : kBasicallllllllyWhite);
          x++) {
