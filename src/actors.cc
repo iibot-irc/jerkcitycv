@@ -2,15 +2,15 @@
 
 std::string findActor(cv::Mat);
 
-void customThreshImg(cv::Mat img) {
-  for (int y = 5; y < img.rows - 5; y++) {
-    for (int x = 5; x < img.cols - 5; x++) {
+void removeBg_Destructive(cv::Mat img) {
+  for (int y = 0; y < img.rows; y++) {
+    for (int x = 0; x < img.cols; x++) {
       auto val = img.at<uint8_t>(y, x);
       if(val > 5 && val < 250) {
         for (int yy = std::max(0, y - 2); yy < std::min(img.rows, y + 2); yy++) {
           for (int xx = std::max(0, x - 2); xx < std::min(img.cols, x + 2); xx++) {
             auto& val = img.at<uint8_t>(yy, xx);
-            if ((yy < y || val > 5) && val < 250) {
+            if ((yy <= y || val > 5) && val < 250) {
               val = 127;
             }
           }
@@ -26,7 +26,6 @@ void customThreshImg(cv::Mat img) {
       }
     }
   }
-  cv::imwrite("/home/j3parker/www/scratch/out4.png", img);
 }
 
 bool tryFindBubbleSource_Destructive(cv::Mat img, cv::Rect bubbleBounds, cv::Rect panelBounds, cv::Point& outPt) {
@@ -129,10 +128,8 @@ void attributeDialog(Context& ctx) {
   for (size_t i = 0; i < ctx.panels.size(); i++) {
     const auto& panel = ctx.panels[i];
 
-    // Create an RGB copy of the panel so we can manipulate the pixels as scratch space
-    auto panelImgRef = cv::Mat{ctx.img, panel.bounds};
-    auto panelImg = cv::Mat{};
-    panelImgRef.assignTo(panelImg, CV_8UC3);
+    // Clone the image for the panel so we can manipulate the pixels as scratch space
+    auto panelImg = cv::Mat{ctx.img, panel.bounds}.clone();
 
     for (auto&& bubble : ctx.panels[i].dialog) {
       auto pt = cv::Point{};
@@ -149,10 +146,11 @@ void attributeDialog(Context& ctx) {
         ASSERT(bounds.y < panel.bounds.height);
         ASSERT(bounds.y + bounds.height <= panel.bounds.height);
         ASSERT(bounds.x + bounds.width <= panel.bounds.width);
-        auto windowRef = cv::Mat{panelImg, bounds};
-        // probably run bg-remover on this ROI
-        auto window = cv::Mat{};
-        windowRef.assignTo(window, CV_8UC1); // create another copy, make this greyscale
+        auto window = cv::Mat{panelImg, bounds};
+
+        removeBg_Destructive(window);
+
+        // All of this is setup to call out to the externally defined image -> name function
         bubble.actor = findActor(window);
       }
     }
