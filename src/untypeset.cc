@@ -168,7 +168,6 @@ auto horizCollector(Context& ctx, std::vector<StrBox>& elems, const int kXSpacin
       return -1;
     }
 
-    // TODO: old stuff had some extra logic here... is it important?
     drawDebugArrow(ctx, a.last, b.first, debugColor);
     merge(a, b, asWords);
 
@@ -330,7 +329,7 @@ int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match, float&
 }
 
 std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templates) {
-  const size_t kMaxChars = 5000; // Probably unnecessary now, but this once was a safety check
+  const size_t kMaxChars = 5000; // This catches bugs that result in infinite loops/going nuts with detection
 
   std::vector<CharBox> results;
 
@@ -345,9 +344,7 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
     auto matchAtlas = cv::Mat(cv::Size(ctx.img.size().width, ctx.img.size().height), CV_32F, 1);
     cv::matchTemplate(ctx.img, tmpl.img, matchAtlas, CV_TM_SQDIFF);
 
-    if (tmpl.name.size() != 1) {
-      throw std::runtime_error{"Char templates must have a name that is exactly one ascii char."};
-    }
+    ASSERT(tmpl.name.size() == 1);
 
     ch.ch = tmpl.name[0];
     ch.bounds = cv::Rect{{0, 0}, tmpl.img.size()};
@@ -368,9 +365,7 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
       cv::rectangle(matchAtlas, ch.bounds, FLT_MAX, CV_FILLED);
       if (ctx.debug) { cv::rectangle(ctx.debugImg, ch.bounds, {0, 0, 0}, CV_FILLED); }
     }
-    if (results.size() >= kMaxChars) {
-      throw std::runtime_error{"Whoa - too many characters. Something went wrong."};
-    }
+    ASSERT(results.size() <= kMaxChars);
   }
 
   if (ctx.debugJson) {
