@@ -3,17 +3,20 @@
 // A CharBox is a node in an intrusive doubly-linked list
 struct CharBox {
   char ch;
-  float score = FLT_MAX; // 0 is a perfect match, score is positive
+  float score = FLT_MAX;  // 0 is a perfect match, score is positive
   cv::Rect bounds;
-  bool wordBoundary = false; // Is this node at the end of a word? (i.e. does it need a space after it when derasterizing?)
+  bool wordBoundary = false;  // Is this node at the end of a word? (i.e. does
+                              // it need a space after it when derasterizing?)
   CharBox* next = nullptr;
   CharBox* prev = nullptr;
-  size_t id; // unique id for keeping track of things in debug output
+  size_t id;  // unique id for keeping track of things in debug output
 };
 
-// A StrBox points to the start and end of a CharBox list. It also caches the bounding rect for the entire list.
+// A StrBox points to the start and end of a CharBox list. It also caches the
+// bounding rect for the entire list.
 struct StrBox {
-  StrBox(CharBox* first_, CharBox *last_, cv::Rect bounds_) : first{first_}, last{last_}, bounds{bounds_} {
+  StrBox(CharBox* first_, CharBox* last_, cv::Rect bounds_)
+      : first{first_}, last{last_}, bounds{bounds_} {
     checkRep();
   }
 
@@ -36,16 +39,19 @@ struct StrBox {
     auto hare = first->next;
     ASSERT(hare != nullptr);
     while (1) {
-      // We are maintaining the invariant that everything up to the tortoise has its prev pointers set correctly.
+      // We are maintaining the invariant that everything up to the tortoise has
+      // its prev pointers set correctly.
 
       if (tortoise == last) {
         return;
       }
 
-      // If the tortoise isnt at the end it will only reach the hare if there is a cycle
+      // If the tortoise isnt at the end it will only reach the hare if there is
+      // a cycle
       ASSERT(tortoise != hare, "string so far: " + soFar);
 
-      // Since we aren't at the end, verify that we are linked to the next node correctly
+      // Since we aren't at the end, verify that we are linked to the next node
+      // correctly
       ASSERT(tortoise->next->prev = tortoise, "string so far: " + soFar);
 
       // Tortoise moves 1 step
@@ -53,14 +59,15 @@ struct StrBox {
       soFar += tortoise->ch;
 
       // Hare attempts to move 2 steps forward
-      hare = hare->next ? (hare->next->next ? hare->next->next : hare->next) : hare;
+      hare = hare->next ? (hare->next->next ? hare->next->next : hare->next)
+                        : hare;
     }
   }
 };
 
 template <class T>
 void checkRep(const std::vector<T>& ts) {
-  for(const auto& t : ts) {
+  for (const auto& t : ts) {
     t.checkRep();
   }
 }
@@ -75,10 +82,11 @@ void merge(StrBox& a, StrBox& b, bool asWords) {
   }
   a.last = b.last;
 
-  a.bounds = a.bounds | b.bounds; // union rects
+  a.bounds = a.bounds | b.bounds;  // union rects
 }
 
-void drawDebugRects(Context& ctx, std::vector<StrBox>& boxes, cv::Scalar c, int thick) {
+void drawDebugRects(Context& ctx, std::vector<StrBox>& boxes, cv::Scalar c,
+                    int thick) {
   if (ctx.debug) {
     for (const auto& box : boxes) {
       cv::rectangle(ctx.debugImg, box.bounds, c, thick);
@@ -87,20 +95,21 @@ void drawDebugRects(Context& ctx, std::vector<StrBox>& boxes, cv::Scalar c, int 
 }
 
 void drawDebugArrow(Context& ctx, CharBox* a, CharBox* b, cv::Scalar c) {
-  int ax = a->bounds.x + a->bounds.width/2;
-  int ay = a->bounds.y + a->bounds.height/2;
-  int bx = b->bounds.x + b->bounds.width/2;
-  int by = b->bounds.y + b->bounds.height/2;
+  int ax = a->bounds.x + a->bounds.width / 2;
+  int ay = a->bounds.y + a->bounds.height / 2;
+  int bx = b->bounds.x + b->bounds.width / 2;
+  int by = b->bounds.y + b->bounds.height / 2;
 
   if (ctx.debug) {
-    cv::line(ctx.debugImg, { ax, ay }, { bx, by }, c, 2, CV_AA);
-    cv::line(ctx.debugImg, { bx, by }, { bx - 3, by + 3 }, c, 1, CV_AA);
-    cv::line(ctx.debugImg, { bx, by }, { bx - 3, by - 3 }, c, 1, CV_AA);
-    cv::line(ctx.debugImg, { bx - 3, by + 3 }, { bx - 3, by - 3 }, c, 1, CV_AA);
+    cv::line(ctx.debugImg, {ax, ay}, {bx, by}, c, 2, CV_AA);
+    cv::line(ctx.debugImg, {bx, by}, {bx - 3, by + 3}, c, 1, CV_AA);
+    cv::line(ctx.debugImg, {bx, by}, {bx - 3, by - 3}, c, 1, CV_AA);
+    cv::line(ctx.debugImg, {bx - 3, by + 3}, {bx - 3, by - 3}, c, 1, CV_AA);
   }
 }
 
-void printStrBoxDebug(Context& ctx, std::vector<StrBox>& boxes, const std::string& label) {
+void printStrBoxDebug(Context& ctx, std::vector<StrBox>& boxes,
+                      const std::string& label) {
   if (!ctx.debugJson) {
     return;
   }
@@ -110,7 +119,7 @@ void printStrBoxDebug(Context& ctx, std::vector<StrBox>& boxes, const std::strin
     auto ptr = box.first;
     do {
       std::cerr << ptr->id << ", ";
-    } while((ptr = ptr->next) != nullptr);
+    } while ((ptr = ptr->next) != nullptr);
     std::cerr << "],\n";
   }
   std::cerr << "\t],\n";
@@ -120,10 +129,14 @@ template <class F>
 void collect(std::vector<StrBox>& chunks, F attemptToJoin) {
   for (size_t i = 0; i < chunks.size(); i++) {
     for (size_t j = 0; j < chunks.size(); j++) {
-      if (i == j) { continue; }
+      if (i == j) {
+        continue;
+      }
 
       auto which = attemptToJoin(i, j);
-      if (which == -1) { continue; }
+      if (which == -1) {
+        continue;
+      }
 
       chunks[(size_t)which == i ? j : i].checkRep();
 
@@ -136,7 +149,8 @@ void collect(std::vector<StrBox>& chunks, F attemptToJoin) {
   }
 }
 
-auto horizCollector(Context& ctx, std::vector<StrBox>& elems, const int kXSpacing, bool asWords, cv::Scalar debugColor) {
+auto horizCollector(Context& ctx, std::vector<StrBox>& elems,
+                    const int kXSpacing, bool asWords, cv::Scalar debugColor) {
   return [=, &ctx, &elems](int i, int j) {
     const auto kYSpacing = 3;
 
@@ -155,13 +169,13 @@ auto horizCollector(Context& ctx, std::vector<StrBox>& elems, const int kXSpacin
 
     // Point on 'a' is on the middle of the right edge
     auto ax = endOfA->bounds.x + endOfA->bounds.width;
-    auto ay = endOfA->bounds.y + endOfA->bounds.height/2;
+    auto ay = endOfA->bounds.y + endOfA->bounds.height / 2;
 
     // Point on 'b' is on the middle of the left edge
     auto bx = startOfB->bounds.x;
-    auto by = startOfB->bounds.y + startOfB->bounds.height/2;
+    auto by = startOfB->bounds.y + startOfB->bounds.height / 2;
 
-    auto xDist = std::abs(bx - ax); // abs because chars can slightly penetrate
+    auto xDist = std::abs(bx - ax);  // abs because chars can slightly penetrate
     auto yDist = std::abs(by - ay);
 
     if (xDist > kXSpacing || yDist > kYSpacing) {
@@ -177,19 +191,21 @@ auto horizCollector(Context& ctx, std::vector<StrBox>& elems, const int kXSpacin
 
 void collectWords(Context& ctx, std::vector<StrBox>& chars) {
   const auto kIntraWordXSpacing = 3;
-  collect(chars, horizCollector(ctx, chars, kIntraWordXSpacing, false, { 255, 127, 127 }));
+  collect(chars, horizCollector(ctx, chars, kIntraWordXSpacing, false,
+                                {255, 127, 127}));
 }
 
 void collectLines(Context& ctx, std::vector<StrBox>& words) {
   const auto kInterWordXSpacing = 14;
   const auto debugColor = cv::Scalar{127, 255, 127};
-  collect(words, horizCollector(ctx, words, kInterWordXSpacing, true, debugColor));
+  collect(words,
+          horizCollector(ctx, words, kInterWordXSpacing, true, debugColor));
 
   drawDebugRects(ctx, words, {255, 127, 255}, 2);
 }
 
 bool intervalIntersects(int a0, int a1, int b0, int b1) {
-  if(a0 < b0) {
+  if (a0 < b0) {
     return b0 < a1;
   } else {
     return a0 < b1;
@@ -209,9 +225,9 @@ void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
     auto& b = lines[j];
 
     auto yDist = std::abs(a.bounds.y + a.bounds.height - b.bounds.y);
-    if (!intervalIntersects(a.bounds.x, a.bounds.x + a.bounds.width,
-                           b.bounds.x, b.bounds.x + b.bounds.width)
-     || yDist > kInterLineSpacing) {
+    if (!intervalIntersects(a.bounds.x, a.bounds.x + a.bounds.width, b.bounds.x,
+                            b.bounds.x + b.bounds.width) ||
+        yDist > kInterLineSpacing) {
       return -1;
     }
 
@@ -231,8 +247,8 @@ std::vector<StrBox> initStrBoxes(std::vector<CharBox>& charBoxes) {
   return result;
 }
 
-
-// Sometimes we may pick up "garbage" lines - i.e. glyphs will be recognized in the background
+// Sometimes we may pick up "garbage" lines - i.e. glyphs will be recognized in
+// the background
 // (usually punctuation.) This function removes them from the line list.
 void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
   const size_t kMaxSuspiciousLength = 3;
@@ -245,8 +261,20 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
     CharBox* ptr = L.first;
     do {
       switch (ptr->ch) {
-        case '-': case '.': case '=': case '/': case '\\': case '\'': case '"':
-        case '|': case ':': case ';': case ',': case 'L': case 'P': case 'T':
+        case '-':
+        case '.':
+        case '=':
+        case '/':
+        case '\\':
+        case '\'':
+        case '"':
+        case '|':
+        case ':':
+        case ';':
+        case ',':
+        case 'L':
+        case 'P':
+        case 'T':
           questionableChars++;
       }
     } while ((ptr = ptr->next) != nullptr && ++length <= kMaxSuspiciousLength);
@@ -256,9 +284,13 @@ void filterGarbageLines(Context& ctx, std::vector<StrBox>& lines) {
     }
 
     if (ctx.debug) {
-      cv::rectangle(ctx.debugImg, L.bounds, { 255, 255, 255 }, CV_FILLED);
-      cv::line(ctx.debugImg, { L.bounds.x, L.bounds.y }, { L.bounds.x + L.bounds.width, L.bounds.y + L.bounds.height }, { 0, 0, 255 }, 2, CV_AA);
-      cv::line(ctx.debugImg, { L.bounds.x, L.bounds.y + L.bounds.height }, { L.bounds.x + L.bounds.width, L.bounds.y }, { 0, 0, 255 }, 2, CV_AA);
+      cv::rectangle(ctx.debugImg, L.bounds, {255, 255, 255}, CV_FILLED);
+      cv::line(ctx.debugImg, {L.bounds.x, L.bounds.y},
+               {L.bounds.x + L.bounds.width, L.bounds.y + L.bounds.height},
+               {0, 0, 255}, 2, CV_AA);
+      cv::line(ctx.debugImg, {L.bounds.x, L.bounds.y + L.bounds.height},
+               {L.bounds.x + L.bounds.width, L.bounds.y}, {0, 0, 255}, 2,
+               CV_AA);
     }
 
     lines.erase(lines.begin() + i);
@@ -275,7 +307,8 @@ bool glyphsConflict(std::vector<CharBox>& chars, int i, int j) {
   auto intersection = chars[i].bounds & chars[j].bounds;
   float intArea = intersection.width * intersection.height;
 
-  return intArea/iArea > kMaxOverlapAreaRatio || intArea/jArea > kMaxOverlapAreaRatio;
+  return intArea / iArea > kMaxOverlapAreaRatio ||
+         intArea / jArea > kMaxOverlapAreaRatio;
 }
 
 void filterConflictingGlyphs(Context& ctx, std::vector<CharBox>& chars) {
@@ -309,7 +342,8 @@ void filterConflictingGlyphs(Context& ctx, std::vector<CharBox>& chars) {
   }
 }
 
-int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match, float& score) {
+int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match,
+                     float& score) {
   const float kCharMatchThresh = 100000.0;
 
   const int width = matchAtlas.size().width;
@@ -317,7 +351,7 @@ int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match, float&
 
   auto data = reinterpret_cast<float*>(matchAtlas.data);
 
-  for(int i = startIndex; i < width * height; i++) {
+  for (int i = startIndex; i < width * height; i++) {
     if (data[i] < kCharMatchThresh) {
       match.x = i % width;
       match.y = i / width;
@@ -328,8 +362,10 @@ int getCredibleMatch(cv::Mat matchAtlas, int startIndex, cv::Rect& match, float&
   return -1;
 }
 
-std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templates) {
-  const size_t kMaxChars = 5000; // This catches bugs that result in infinite loops/going nuts with detection
+std::vector<CharBox> findGlyphs(Context& ctx,
+                                const std::vector<Template>& templates) {
+  const size_t kMaxChars = 5000;  // This catches bugs that result in infinite
+                                  // loops/going nuts with detection
 
   std::vector<CharBox> results;
 
@@ -340,8 +376,9 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
   CharBox ch;
   ch.id = 0;
 
-  for(auto&& tmpl : templates) {
-    auto matchAtlas = cv::Mat(cv::Size(ctx.img.size().width, ctx.img.size().height), CV_32F, 1);
+  for (auto&& tmpl : templates) {
+    auto matchAtlas = cv::Mat(
+        cv::Size(ctx.img.size().width, ctx.img.size().height), CV_32F, 1);
     cv::matchTemplate(ctx.img, tmpl.img, matchAtlas, CV_TM_SQDIFF);
 
     ASSERT(tmpl.name.size() == 1);
@@ -351,19 +388,24 @@ std::vector<CharBox> findGlyphs(Context& ctx, const std::vector<Template>& templ
 
     // Find all instances of this glyph
     int index = 0;
-    while((index = getCredibleMatch(matchAtlas, index, ch.bounds, ch.score)) != -1 && results.size() < kMaxChars) {
+    while ((index = getCredibleMatch(matchAtlas, index, ch.bounds, ch.score)) !=
+               -1 &&
+           results.size() < kMaxChars) {
       results.push_back(ch);
       ch.id++;
 
       if (ctx.debugJson) {
-        std::cerr << "\t\t{ \"ch\": \"" << ch.ch << ", \"id\": " << ch.id << ", \"score\": " << ch.score << ", ";
+        std::cerr << "\t\t{ \"ch\": \"" << ch.ch << ", \"id\": " << ch.id
+                  << ", \"score\": " << ch.score << ", ";
         printRectJson(ch.bounds);
         std::cerr << " },\n";
       }
 
       // Clear out a ROI around the match we just found
       cv::rectangle(matchAtlas, ch.bounds, FLT_MAX, CV_FILLED);
-      if (ctx.debug) { cv::rectangle(ctx.debugImg, ch.bounds, {0, 0, 0}, CV_FILLED); }
+      if (ctx.debug) {
+        cv::rectangle(ctx.debugImg, ch.bounds, {0, 0, 0}, CV_FILLED);
+      }
     }
     ASSERT(results.size() <= kMaxChars);
   }
@@ -384,7 +426,7 @@ std::string strBoxToString(const StrBox& strBox) {
     if (ptr->wordBoundary) {
       result += " ";
     }
-  } while((ptr = ptr->next) != nullptr);
+  } while ((ptr = ptr->next) != nullptr);
 
   return result;
 }
@@ -415,7 +457,8 @@ void placeBubblesInPanels(Context& ctx, std::vector<StrBox>& bubbles) {
 
 void sortBubblesInPanels(Context& ctx) {
   for (auto& panel : ctx.panels) {
-    std::sort(panel.dialog.begin(), panel.dialog.end(), [](Bubble& a, Bubble& b) {
+    std::sort(panel.dialog.begin(), panel.dialog.end(),
+              [](Bubble& a, Bubble& b) {
       const auto kAlmostSameHeight = 5;
       if (std::abs(a.bounds.y - b.bounds.y) <= kAlmostSameHeight) {
         return a.bounds.x < b.bounds.x;

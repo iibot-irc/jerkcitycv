@@ -6,9 +6,11 @@ void removeBg_Destructive(cv::Mat img) {
   for (int y = 0; y < img.rows; y++) {
     for (int x = 0; x < img.cols; x++) {
       auto val = img.at<uint8_t>(y, x);
-      if(val > 5 && val < 250) {
-        for (int yy = std::max(0, y - 2); yy < std::min(img.rows, y + 2); yy++) {
-          for (int xx = std::max(0, x - 2); xx < std::min(img.cols, x + 2); xx++) {
+      if (val > 5 && val < 250) {
+        for (int yy = std::max(0, y - 2); yy < std::min(img.rows, y + 2);
+             yy++) {
+          for (int xx = std::max(0, x - 2); xx < std::min(img.cols, x + 2);
+               xx++) {
             auto& val = img.at<uint8_t>(yy, xx);
             if ((yy <= y || val > 5) && val < 250) {
               val = 127;
@@ -28,25 +30,30 @@ void removeBg_Destructive(cv::Mat img) {
   }
 }
 
-bool tryFindBubbleSource_Destructive(cv::Mat img, cv::Rect bubbleBounds, cv::Rect panelBounds, cv::Point& outPt) {
-  // This algorithm finds the bottom tip of a speech bubble with a flood-fill-esque technique
-  // First, we drop some grey pixels in the middle row of the speech bubble, 2/3 wide, everywhere there is a white pixel.
+bool tryFindBubbleSource_Destructive(cv::Mat img, cv::Rect bubbleBounds,
+                                     cv::Rect panelBounds, cv::Point& outPt) {
+  // This algorithm finds the bottom tip of a speech bubble with a
+  // flood-fill-esque technique
+  // First, we drop some grey pixels in the middle row of the speech bubble, 2/3
+  // wide, everywhere there is a white pixel.
   // The algorithm proceeds in a loop with two passes each run:
-  //    1. based on the minX/maxX of the previous iteration, look at the row below the previous iteration and if the pixel
-  //       is white and the above is grey, make the pixel grey. This "bleeds" grey downwards
+  //    1. based on the minX/maxX of the previous iteration, look at the row
+  // below the previous iteration and if the pixel
+  //       is white and the above is grey, make the pixel grey. This "bleeds"
+  // grey downwards
   //    2. "smear" the grey horizontally, stopping at black pixels.
   auto basicallyBlack = [](auto pix) {
     const auto kBasicallyBlack = 10;
     return pix < kBasicallyBlack;
   };
 
-  auto minX = bubbleBounds.x + bubbleBounds.width/6 - panelBounds.x;
-  auto maxX = minX + 2*bubbleBounds.width/3;
+  auto minX = bubbleBounds.x + bubbleBounds.width / 6 - panelBounds.x;
+  auto maxX = minX + 2 * bubbleBounds.width / 3;
   ASSERT(0 < minX && minX < panelBounds.width);
   ASSERT(0 < maxX && maxX < panelBounds.width);
 
   auto lastX = -1;
-  auto y = bubbleBounds.y + bubbleBounds.height/3 - panelBounds.y;
+  auto y = bubbleBounds.y + bubbleBounds.height / 3 - panelBounds.y;
   ASSERT(0 < y && y < panelBounds.height);
 
   // "Seed" grey pixels
@@ -109,7 +116,8 @@ bool tryFindBubbleSource_Destructive(cv::Mat img, cv::Rect bubbleBounds, cv::Rec
 
     y++;
 
-    // If this is tripped either there is a bug in the algo or the comic is weird (does happen)
+    // If this is tripped either there is a bug in the algo or the comic is
+    // weird (does happen)
     if (y == panelBounds.height) {
       return false;
     }
@@ -128,17 +136,21 @@ void attributeDialog(Context& ctx) {
   for (size_t i = 0; i < ctx.panels.size(); i++) {
     const auto& panel = ctx.panels[i];
 
-    // Clone the image for the panel so we can manipulate the pixels as scratch space
-    auto panelImg = cv::Mat{ctx.img, panel.bounds}.clone();
+    // Clone the image for the panel so we can manipulate the pixels as scratch
+    // space
+    auto panelImg = cv::Mat { ctx.img, panel.bounds }
+    .clone();
 
     for (auto&& bubble : ctx.panels[i].dialog) {
       auto pt = cv::Point{};
-      if (tryFindBubbleSource_Destructive(panelImg, bubble.bounds, panel.bounds, pt)) {
+      if (tryFindBubbleSource_Destructive(panelImg, bubble.bounds, panel.bounds,
+                                          pt)) {
         const auto kWindowWidth = 128;
         const auto kWindowYOffset = 16;
 
-        auto bounds = cv::Rect{std::max(0, pt.x - kWindowWidth/2),
-                               std::min(panel.bounds.height - 1, pt.y + kWindowYOffset),
+        auto bounds = cv::Rect{std::max(0, pt.x - kWindowWidth / 2),
+                               std::min(panel.bounds.height - 1,
+                                        pt.y + kWindowYOffset),
                                0, 0};
         bounds.width = std::min(panel.bounds.width - bounds.x, kWindowWidth);
         bounds.height = panel.bounds.height - bounds.y;
@@ -150,10 +162,10 @@ void attributeDialog(Context& ctx) {
 
         removeBg_Destructive(window);
 
-        // All of this is setup to call out to the externally defined image -> name function
+        // All of this is setup to call out to the externally defined image ->
+        // name function
         bubble.actor = findActor(window);
       }
     }
-
   }
 }

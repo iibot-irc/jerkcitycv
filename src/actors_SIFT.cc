@@ -2,7 +2,8 @@
 
 #include <opencv2/nonfree/nonfree.hpp>
 
-void findFeatures(cv::Mat img, std::vector<cv::KeyPoint>& outKeypoints, cv::Mat& outDescriptors) {
+void findFeatures(cv::Mat img, std::vector<cv::KeyPoint>& outKeypoints,
+                  cv::Mat& outDescriptors) {
   auto detector = cv::SiftFeatureDetector{};
   detector.detect(img, outKeypoints);
 
@@ -13,7 +14,8 @@ void findFeatures(cv::Mat img, std::vector<cv::KeyPoint>& outKeypoints, cv::Mat&
 struct ActorTemplate {
   ActorTemplate(const Template& genericTemplate) {
     findFeatures(genericTemplate.img, keypoints, descriptors);
-    ASSERT(!descriptors.empty(), "no features detected in this actor template!");
+    ASSERT(!descriptors.empty(),
+           "no features detected in this actor template!");
     name = genericTemplate.name;
     img = genericTemplate.img;
   }
@@ -31,7 +33,7 @@ std::string findActor(cv::Mat img) {
   static auto actorTmpls = std::vector<ActorTemplate>{};
   if (actorTmpls.empty()) {
     auto genericTmpls = loadTemplates("actors");
-    actorTmpls.reserve(2*genericTmpls.size() + 1);
+    actorTmpls.reserve(2 * genericTmpls.size() + 1);
     for (auto&& tmpl : genericTmpls) {
       actorTmpls.emplace_back(tmpl);
       auto tmplFlipped = tmpl;
@@ -54,24 +56,26 @@ std::string findActor(cv::Mat img) {
     auto matches = std::vector<cv::DMatch>{};
     matcher.match(actor.descriptors, descriptors, matches);
 
-    auto bounds = std::minmax_element(matches.begin(), matches.end(), [](const auto& a, const auto& b) {
-      return a.distance < b.distance;
-    });
-    float minDist = std::min(150.0f, std::max(3.0f*bounds.first->distance, 0.5f));
+    auto bounds = std::minmax_element(
+        matches.begin(), matches.end(),
+        [](const auto& a, const auto& b) { return a.distance < b.distance; });
+    float minDist =
+        std::min(150.0f, std::max(3.0f * bounds.first->distance, 0.5f));
 
     auto goodMatches = std::vector<cv::DMatch>{};
-    std::copy_if(matches.begin(), matches.end(), std::back_inserter(goodMatches), [minDist](const auto& m) {
-      return m.distance <= minDist;
-    });
+    std::copy_if(matches.begin(), matches.end(),
+                 std::back_inserter(goodMatches),
+                 [minDist](const auto& m) { return m.distance <= minDist; });
 
     if (goodMatches.size() < 2) {
       continue;
     }
 
-    double score = (double)goodMatches.size()/(double)matches.size();
+    double score = (double)goodMatches.size() / (double)matches.size();
     if (score > 0.02f) {
       actorMatches.emplace_back(score, actor);
-      //std::cerr << actor.name << ": " << goodMatches.size() << " out of " << matches.size() << ": " << score << "\n";
+      // std::cerr << actor.name << ": " << goodMatches.size() << " out of " <<
+      // matches.size() << ": " << score << "\n";
     }
   }
 
@@ -79,6 +83,8 @@ std::string findActor(cv::Mat img) {
     return "unknown";
   }
 
-  return std::max_element(actorMatches.begin(), actorMatches.end(), [](const auto& a, const auto& b) { return a.first < b.first; })->second.name;
+  return std::max_element(actorMatches.begin(), actorMatches.end(),
+                          [](const auto& a, const auto& b) {
+                            return a.first < b.first;
+                          })->second.name;
 }
-

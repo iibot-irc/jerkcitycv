@@ -31,7 +31,8 @@ void saveDebug(const Context& ctx, const std::string& file) {
 }
 
 void hackOutStarringPanel(Context& ctx) {
-  ctx.panels[0].dialog.clear(); // TODO: are there any comics where this is wrong?
+  ctx.panels[0]
+      .dialog.clear();  // TODO: are there any comics where this is wrong?
 }
 
 void printComic(Context& ctx) {
@@ -57,16 +58,20 @@ void process(Context& ctx) {
 int main(int argc, char** argv) {
   namespace po = boost::program_options;
   auto desc = po::options_description{"Allowed options"};
-  desc.add_options()
-    ("help", "this message")
-    ("debug-json", "print JSON formatted debug data to stderr")
-    ("debug-file", po::value<std::string>(),  "file to store a .png with debug output")
-    ("input-file", po::value<std::string>(), "input comic in png format");
+  desc.add_options()("help", "this message")(
+      "debug-json", "print JSON formatted debug data to stderr")(
+      "debug-file", po::value<std::string>(),
+      "file to store a .png with debug output")(
+      "input-file", po::value<std::string>(), "input comic in png format");
 
   auto po_desc = po::positional_options_description{};
 
   auto vm = po::variables_map{};
-  po::store(po::command_line_parser(argc, argv).options(desc).positional(po_desc).run(), vm);
+  po::store(po::command_line_parser(argc, argv)
+                .options(desc)
+                .positional(po_desc)
+                .run(),
+            vm);
   po::notify(vm);
 
   if (vm.count("help") || !vm.count("input-file")) {
@@ -79,7 +84,8 @@ int main(int argc, char** argv) {
   auto ctx = Context{inFile, vm.count("debug-file") != 0};
   ctx.debugJson = vm.count("debug-json") != 0;
 
-  const std::string debugFile = vm.count("debug-file") ? vm["debug-file"].as<std::string>() : "";
+  const std::string debugFile =
+      vm.count("debug-file") ? vm["debug-file"].as<std::string>() : "";
 
   if (ctx.debugJson) {
     std::cerr << "{\n";
@@ -87,7 +93,8 @@ int main(int argc, char** argv) {
 
   try {
     process(ctx);
-  } catch (...) {
+  }
+  catch (...) {
     saveDebug(ctx, debugFile);
     throw;
   }

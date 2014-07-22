@@ -1,23 +1,26 @@
 #include "context.h"
 
 void drawDebugLine(Context& ctx, int x0, int y0, int x1, int y1) {
-    if (ctx.debug) {
-      cv::line(ctx.debugImg, { x0, y0 }, { x1, y1 }, { 0, 0, 255 }, 3);
-    }
+  if (ctx.debug) {
+    cv::line(ctx.debugImg, {x0, y0}, {x1, y1}, {0, 0, 255}, 3);
+  }
 }
 
 void findPanels(Context& ctx) {
   ASSERT(ctx.img.channels() == 1);
 
-  const size_t kSkipAmount = 50; // If we find a panel divider, skip 80 pixels for the next one.
-  const uint8_t kBasicallyWhite = 200; // Any value above this is to be considered "white"
+  const size_t kSkipAmount =
+      50;  // If we find a panel divider, skip 80 pixels for the next one.
+  const uint8_t kBasicallyWhite =
+      200;  // Any value above this is to be considered "white"
   const uint8_t kBasicallllllllyWhite = 127;
 
   const size_t width = ctx.img.size().width;
   const size_t height = ctx.img.size().height;
 
   if (width <= kSkipAmount || height <= kSkipAmount) {
-    throw std::runtime_error{"Image is too small for these algorithms to work..."};
+    throw std::runtime_error{
+        "Image is too small for these algorithms to work..."};
   }
 
   auto* data = (uint8_t*)ctx.img.data;
@@ -26,9 +29,11 @@ void findPanels(Context& ctx) {
   std::vector<size_t> ys;
   for (size_t y = 0; y < height; y++) {
     size_t x;
-    for (x = 0;
-        x < width && data[x + y*width] >= (ys.size() > 1 ? kBasicallyWhite : kBasicallllllllyWhite);
-        x++) {}
+    for (x = 0; x < width && data[x + y * width] >=
+                                 (ys.size() > 1 ? kBasicallyWhite
+                                                : kBasicallllllllyWhite);
+         x++) {
+    }
 
     // Ensure there is a divider above the top panels
     if (ys.size() == 0 && y > kSkipAmount) {
@@ -48,28 +53,31 @@ void findPanels(Context& ctx) {
   // Find vertical lines
   const size_t kPointOfNoReturn = 250;
   const size_t kUrgTolerance = 7;
-  const size_t kYFloor = 3; // Some comics have a bar across the top
+  const size_t kYFloor = 3;  // Some comics have a bar across the top
   size_t urgCounter = 0;
   std::vector<size_t> xs;
   for (size_t x = 0; x < width; x++) {
     size_t y;
     for (y = kYFloor; y < height; y++) {
-      if (data[x + y*width] < kBasicallyWhite) {
-        #ifdef RED_KICKSTARTER_FOOTER
-        // hack: during the BBoJC Kickstarter a red footer was applied to each comic
+      if (data[x + y * width] < kBasicallyWhite) {
+#ifdef RED_KICKSTARTER_FOOTER
+        // hack: during the BBoJC Kickstarter a red footer was applied to each
+        // comic
         if (y > height - 30) {
           y = height;
           break;
         }
-        #endif
+#endif
 
         // After some point we do not permit any non-white pixels
         if (y > kPointOfNoReturn) {
           break;
         }
 
-        // If we are near the top of the image, permit some amount of non-white chars
-        // This allows the line to "tunnel through" the title text which sometimes
+        // If we are near the top of the image, permit some amount of non-white
+        // chars
+        // This allows the line to "tunnel through" the title text which
+        // sometimes
         // overflows panel 1.
         if (xs.size() > 1 || urgCounter++ > kUrgTolerance) {
           break;
@@ -138,8 +146,10 @@ void findPanels(Context& ctx) {
     std::cerr << "\t],\n";
   }
 
-  cv::rectangle(ctx.img, ctx.panels[0].bounds, cv::Scalar(0, 255, 0), CV_FILLED);
+  cv::rectangle(ctx.img, ctx.panels[0].bounds, cv::Scalar(0, 255, 0),
+                CV_FILLED);
   if (ctx.debug) {
-    cv::rectangle(ctx.debugImg, ctx.panels[0].bounds, cv::Scalar(0, 255, 0), CV_FILLED);
+    cv::rectangle(ctx.debugImg, ctx.panels[0].bounds, cv::Scalar(0, 255, 0),
+                  CV_FILLED);
   }
 }

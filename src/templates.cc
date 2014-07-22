@@ -12,7 +12,8 @@ std::vector<Template> loadTemplates(const std::string& pathStr) {
   }
 
   std::vector<Template> templates;
-  for (auto fIt = fs::directory_iterator{path}; fIt != fs::directory_iterator{}; ++fIt) {
+  for (auto fIt = fs::directory_iterator{path}; fIt != fs::directory_iterator{};
+       ++fIt) {
     auto file = fs::path{*fIt};
     if (!fs::is_regular_file(file) || file.extension() != ".png") {
       continue;
@@ -25,7 +26,7 @@ std::vector<Template> loadTemplates(const std::string& pathStr) {
 
     auto label = file.stem().string();
     label = label.substr(0, label.find("."));
-    label = label == "dot" ? "." : label; // This is a hack for the "." char
+    label = label == "dot" ? "." : label;  // This is a hack for the "." char
 
     templates.emplace_back(label, img);
   }
