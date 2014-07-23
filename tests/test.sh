@@ -2,7 +2,7 @@
 NUM=$1
 echo $NUM
 CHUNK=`awk "/^<issue num=\"$NUM\">$/{a=1;next}/<\/dialog>/{a=0}a" dialog.xml`
-EXPECTED=`echo "$CHUNK" | grep -m1 -A5000 '<dialog>' | tail -n +2`
+EXPECTED=`echo "$CHUNK" | grep -m1 -A5000 '<dialog>' | tail -n +2 | sed -e 's/&gt;/>/g' -e 's/&lt;/</g' -e 's/&amp;/&/g'`
 
 echo "<img src=\"http://jerkcity.com/jerkcity$NUM.gif\"><img src=\"$NUM.debug.png\">" > out/$NUM.html
 
@@ -23,8 +23,8 @@ if [[ $EX -ne 0 ]]; then
   exit
 fi
 
-EXESC=`echo "$EXPECTED" | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g'`
-ACESC=`echo "$ACTUAL" | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g'`
+EXESC=`echo "$EXPECTED" | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/&/&amp;/g'`
+ACESC=`echo "$ACTUAL" | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/&/&amp;/g'`
 
 if [[ $EXPECTED == "" ]]; then
   echo "<a href=\"$NUM.html\" style=\"font-size: 20; display: block-inline; width: 5em; background: grey\">$NUM</a>" > out/$NUM.dat
