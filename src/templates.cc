@@ -26,8 +26,9 @@ std::vector<Template> loadTemplates(const std::string& pathStr) {
 
     auto label = file.stem().string();
     label = label.substr(0, label.find("."));
-    label = label == "dot" ? "." : label;  // This is a hack for the "." char
+    label = label == "dot" ? "." : label;   // This is a hack for the "." char
     label = label == "slash" ? "/" : label; // Another hack
+    label = label == "tilde" ? "~" : label; // ...
 
     templates.emplace_back(label, img);
   }
