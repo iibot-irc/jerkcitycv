@@ -1,5 +1,7 @@
 #include "context.h"
 
+#include <fstream>
+
 #include <boost/algorithm/string/replace.hpp>
 
 // A CharBox is a node in an intrusive doubly-linked list
@@ -72,6 +74,17 @@ void checkRep(const std::vector<T>& ts) {
   for (const auto& t : ts) {
     t.checkRep();
   }
+}
+
+std::set<std::string> kWords;
+void loadWords() {
+  std::ifstream fin{"/usr/share/dict/words"};
+  std::string word;
+  while (std::getline(fin, word)) {
+    std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+    kWords.insert(word);
+  }
+  kWords.insert({"rands", "cocksucking", "goddamnit"});
 }
 
 void merge(StrBox& a, StrBox& b, bool asWords) {
@@ -214,22 +227,26 @@ bool intervalIntersects(int a0, int a1, int b0, int b1) {
   }
 }
 
-std::string getBoundaryWordChars(StrBox a, bool forward) {
+std::string getBoundaryWord(StrBox a, bool forward) {
   auto ptr = forward ? a.first : a.last;
   std::string str;
   ASSERT(ptr != nullptr);
-  while (ptr != nullptr && !ptr->wordBoundary) {
+  while (ptr != nullptr) {
     if (forward) {
       str = str + ptr->ch;
+      if (ptr->wordBoundary) {
+        break;
+      }
       ptr = ptr->next;
     } else {
+      if (ptr->wordBoundary) {
+        break;
+      }
       str = ptr->ch + str; // hurt me plenty!
       ptr = ptr->prev;
     }
   }
-
-  std::sort(str.begin(), str.end());
-  str.erase(std::unique(str.begin(), str.end()), str.end());
+  std::transform(str.begin(), str.end(), str.begin(), ::tolower);
   return str;
 }
 
@@ -253,10 +270,16 @@ void collectBubbles(Context& ctx, std::vector<StrBox>& lines) {
     }
 
     // Hack: Long strings like "HGHLGUHGLHGUHLUGHGLGHU" get split midway through - don't insert a space if this looks to be the case
-    auto lastCharsInA = getBoundaryWordChars(a, false);
-    auto firstCharsInB = getBoundaryWordChars(b, true);
+    auto wordA = getBoundaryWord(a, false);
+    auto wordB = getBoundaryWord(b, true);
+    auto lastCh = *(wordA.end() - 1);
 
-    merge(a, b, lastCharsInA.size() > 6 || lastCharsInA != firstCharsInB);
+    auto asWords = kWords.find(wordA) != kWords.end()
+                || kWords.find(wordB) != kWords.end()
+                || lastCh == '.'
+                || lastCh == ',';
+
+    merge(a, b, asWords);
 
     return j;
   });
@@ -508,6 +531,8 @@ void sortBubblesInPanels(Context& ctx) {
 }
 
 void untypeset(Context& ctx) {
+  loadWords();
+
   std::vector<CharBox> charBoxes;
   {
     auto glyphs = loadTemplates("glyphs");
